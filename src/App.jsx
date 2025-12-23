@@ -1,4 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, writeBatch } from 'firebase/firestore';
+
+// ==========================================
+// 0. Firebase 設定 (已更新)
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyA6nNGBreAOwdIbQp1aRAj-XiokoXOTH8Q",
+  authDomain: "travel-mate-2025.firebaseapp.com",
+  projectId: "travel-mate-2025",
+  storageBucket: "travel-mate-2025.firebasestorage.app",
+  messagingSenderId: "617929806986",
+  appId: "1:617929806986:web:409c7d4febee9345450973"
+};
 
 // ==========================================
 // 1. 純 SVG 圖示系統 (零外部依賴)
@@ -42,9 +57,6 @@ const Icons = {
 // ==========================================
 // 2. Firebase Imports & Service
 // ==========================================
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, writeBatch } from 'firebase/firestore';
 
 const SafeStorage = {
   get: (key, fallback) => {
@@ -60,32 +72,40 @@ const Service = {
   db: null, auth: null, user: null, mode: 'loading',
   init: async () => {
     try {
-      const configStr = import.meta.env.VITE_FIREBASE_CONFIG || (typeof __firebase_config !== 'undefined' ? __firebase_config : null);
-      if (configStr) {
-        const config = typeof configStr === 'string' ? JSON.parse(configStr) : configStr;
-        const app = getApps().length === 0 ? initializeApp(config) : getApp();
-        Service.auth = getAuth(app);
-        Service.db = getFirestore(app);
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(Service.auth, __initial_auth_token);
-        else await signInAnonymously(Service.auth);
-        return new Promise(resolve => {
-          onAuthStateChanged(Service.auth, (u) => {
-            if (u) { Service.user = u; Service.mode = 'cloud'; resolve('cloud'); }
-            else { Service.user = { uid: 'guest' }; Service.mode = 'local'; resolve('local'); }
-          });
-        });
+      // 直接使用傳入的 firebaseConfig
+      const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+      Service.auth = getAuth(app);
+      Service.db = getFirestore(app);
+
+      // 檢查是否有 Canvas 環境的 Token，如果沒有則使用匿名登入
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(Service.auth, __initial_auth_token);
+      } else {
+        await signInAnonymously(Service.auth);
       }
-    } catch (e) { console.warn("Firebase Init Failed:", e); }
-    Service.user = { uid: 'guest' };
-    Service.mode = 'local';
-    return 'local';
+      
+      return new Promise(resolve => {
+        onAuthStateChanged(Service.auth, (u) => {
+          if (u) { Service.user = u; Service.mode = 'cloud'; resolve('cloud'); }
+          else { Service.user = { uid: 'guest' }; Service.mode = 'local'; resolve('local'); }
+        });
+      });
+    } catch (e) { 
+      console.warn("Firebase Init Failed:", e); 
+      Service.user = { uid: 'guest' };
+      Service.mode = 'local';
+      return 'local';
+    }
   },
   subscribe: (tripId, type, callback) => {
     if (Service.mode === 'cloud' && Service.db) {
       try {
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const appId = firebaseConfig.projectId; // 使用 config 中的 projectId 或其他標識
         // 使用 'public' 路徑實現家庭共享
-        let path = tripId ? ['artifacts', appId, 'public', 'data', 'trips', tripId, type] : ['artifacts', appId, 'public', 'data', 'trips'];
+        // 注意：為了簡化，這裡移除了 __app_id 依賴，直接存放在 artifacts/travel-mate/public 下
+        const rootPath = 'travel-mate-data'; // 簡化路徑，避免複雜的 appId 依賴
+        let path = tripId ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] : ['artifacts', rootPath, 'public', 'data', 'trips'];
+        
         let q = collection(Service.db, ...path);
         if (!tripId) q = query(q, orderBy('startDate', 'desc'));
         else if (type === 'itinerary') q = query(q, orderBy('time', 'asc'));
@@ -99,16 +119,16 @@ const Service = {
     }
   },
   op: async (tripId, type, action, data, id) => {
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const rootPath = 'travel-mate-data';
     if (Service.mode === 'cloud' && Service.db) {
       try {
-        let path = tripId ? ['artifacts', appId, 'public', 'data', 'trips', tripId, type] : ['artifacts', appId, 'public', 'data', 'trips'];
+        let path = tripId ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] : ['artifacts', rootPath, 'public', 'data', 'trips'];
         const colRef = collection(Service.db, ...path);
         if (action === 'add') await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
         else if (action === 'update') await updateDoc(doc(colRef, id), data);
         else if (action === 'delete') await deleteDoc(doc(colRef, id));
         return null;
-      } catch { }
+      } catch (e) { console.error(e); }
     }
     const key = tripId ? `tm_v25_${type}_${tripId}` : 'tm_v25_trips';
     let list = SafeStorage.get(key, []);
@@ -125,10 +145,10 @@ const Service = {
     return list;
   },
   batchSwap: async (tripId, itemA, itemB) => {
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const rootPath = 'travel-mate-data';
     if (Service.mode === 'cloud' && Service.db) {
       const batch = writeBatch(Service.db);
-      const pathBase = ['artifacts', appId, 'public', 'data', 'trips', tripId, 'itinerary'];
+      const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, 'itinerary'];
       batch.update(doc(Service.db, ...pathBase, itemA.id), { time: itemB.time });
       batch.update(doc(Service.db, ...pathBase, itemB.id), { time: itemA.time });
       await batch.commit();
@@ -339,7 +359,7 @@ const TYPE_ICONS = { fun:'🎡', food:'🍜', shopping:'🛍️', transport:'�
 // ==========================================
 // 5. 主程式入口
 // ==========================================
-export default function TravelAppRecallFixed() {
+export default function App() {
   return (
     <ErrorBoundary>
       <AppContent />
@@ -389,7 +409,7 @@ function AppContent() {
         <TripDetail 
           trip={activeTrip} 
           mode={mode}
-          onUpdate={(d) => updateTrip(activeTrip.id, d)}
+          onUpdate={(d) => updateTrip(d)}
           onBack={() => setActiveTripId(null)}
         />
       ) : (
