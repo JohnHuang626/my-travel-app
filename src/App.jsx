@@ -4,7 +4,7 @@ import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken }
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, writeBatch } from 'firebase/firestore';
 
 // ==========================================
-// 0. Firebase 設定 (已更新)
+// 0. Firebase 設定
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyA6nNGBreAOwdIbQp1aRAj-XiokoXOTH8Q",
@@ -25,7 +25,8 @@ const SvgIcon = ({ d, size = 20, className = "" }) => (
 );
 
 const Icons = {
-  Plane: (p) => <SvgIcon {...p} d={<path d="M2 12h20M2 12l5-5m-5 5l5 5"/>} />,
+  // 經典飛機造型 (類似 ✈️ Emoji)
+  Plane: (p) => <SvgIcon {...p} fill="currentColor" stroke="none" d={<path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>} />,
   Calendar: (p) => <SvgIcon {...p} d={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>} />,
   Camera: (p) => <SvgIcon {...p} d={<><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>} />,
   Plus: (p) => <SvgIcon {...p} d={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />,
@@ -163,7 +164,7 @@ const Service = {
     if (Service.mode === 'cloud' && Service.db) {
       try {
         const batch = writeBatch(Service.db);
-        const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type];
+        const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, 'itinerary'];
         ids.forEach(id => {
           batch.delete(doc(Service.db, ...pathBase, id));
         });
@@ -292,7 +293,7 @@ const TripSettingsModal = ({ isOpen, trip, onClose, onSave, handleImg }) => {
   return (
     <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4 animate-in fade-in">
       <div className="bg-white rounded-xl w-full max-w-sm p-5 flex flex-col">
-        <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold flex items-center gap-2"><Icons.Settings className="text-teal-600" size={20}/> 旅行設定</h3><button onClick={onClose}><Icons.X className="text-slate-400"/></button></div>
+        <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold flex items-center gap-2"><Icons.Settings className="text-sky-600" size={20}/> 旅行設定</h3><button onClick={onClose}><Icons.X className="text-slate-400"/></button></div>
         <div className="space-y-4 mb-6">
           <div className="border p-2 rounded bg-slate-50 text-center cursor-pointer" onClick={()=>fileRef.current.click()}>
              {data.coverImage ? <img src={data.coverImage} className="h-32 w-full object-cover rounded"/> : <div className="h-20 flex flex-col justify-center items-center text-slate-400"><Icons.Camera size={24}/><span className="text-xs">封面</span></div>}
@@ -304,7 +305,7 @@ const TripSettingsModal = ({ isOpen, trip, onClose, onSave, handleImg }) => {
             <div><label className="block text-xs text-slate-500 mb-1">結束</label><input type="date" className="w-full border p-2 rounded-lg text-sm" value={data.endDate} onChange={e => setData({...data, endDate: e.target.value})}/></div>
           </div>
         </div>
-        <button onClick={() => { onSave(data); onClose(); }} className="w-full py-3 bg-teal-600 text-white rounded-lg font-bold text-sm shadow-md">儲存變更</button>
+        <button onClick={() => { onSave(data); onClose(); }} className="w-full py-3 bg-sky-600 text-white rounded-lg font-bold text-sm shadow-md">儲存變更</button>
       </div>
     </div>
   );
@@ -394,7 +395,24 @@ function AppContent() {
   const [mode, setMode] = useState('loading');
 
   useEffect(() => {
-    document.title = "我的旅行";
+    document.title = "我的旅程";
+    
+    // 設定網頁圖示 (Favicon & Apple Touch Icon) - 天空藍主題
+    const setFavicon = () => {
+      const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+      link.type = 'image/svg+xml';
+      link.rel = 'icon';
+      // 修改：背景改為 Sky Blue (Sky 500: #0ea5e9)，飛機為白色
+      link.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 fill=%22%230ea5e9%22 rx=%224%22/><path fill=%22white%22 d=%22M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z%22/></svg>`;
+      document.head.appendChild(link);
+
+      const appleLink = document.querySelector("link[rel='apple-touch-icon']") || document.createElement('link');
+      appleLink.rel = 'apple-touch-icon';
+      appleLink.href = link.href;
+      document.head.appendChild(appleLink);
+    };
+    setFavicon();
+
     Service.init().then(m => { setMode(m); setLoaded(true); });
   }, []);
 
@@ -461,22 +479,22 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
   return (
     <div className="pb-20">
       <ConfirmModal isOpen={!!deleteModal} title="刪除" message="確定刪除？" onConfirm={() => { onDelete(deleteModal); setDeleteModal(null); }} onCancel={() => setDeleteModal(null)} />
-      <header className={`text-white p-6 pt-10 shadow-md rounded-b-3xl mb-6 ${mode==='cloud'?'bg-teal-600':'bg-slate-600'}`}>
+      <header className={`text-white p-6 pt-10 shadow-md rounded-b-3xl mb-6 ${mode==='cloud'?'bg-sky-600':'bg-slate-600'}`}>
         <h1 className="text-2xl font-bold flex items-center gap-2"><Icons.Plane /> 我的旅程</h1>
         <div className="text-[10px] opacity-80 mt-1 flex items-center gap-1">{mode==='cloud'?<><Icons.Cloud size={10}/> 家庭共享模式</>:<><Icons.CloudOff size={10}/> 本機試用模式</>}</div>
       </header>
 
       <div className="px-4 space-y-4">
         {!isCreating ? (
-          <button onClick={() => setIsCreating(true)} className="w-full py-4 border-2 border-dashed border-teal-200 rounded-2xl flex items-center justify-center gap-2 text-teal-600 font-bold hover:bg-teal-50 bg-white"><Icons.Plus/> 建立新計畫</button>
+          <button onClick={() => setIsCreating(true)} className="w-full py-4 border-2 border-dashed border-sky-200 rounded-2xl flex items-center justify-center gap-2 text-sky-600 font-bold hover:bg-sky-50 bg-white"><Icons.Plus/> 建立新計畫</button>
         ) : (
-          <div className="bg-white p-4 rounded-xl shadow-lg border border-teal-100 animate-in fade-in">
+          <div className="bg-white p-4 rounded-xl shadow-lg border border-sky-100 animate-in fade-in">
             <input className="w-full border p-2 rounded mb-2" placeholder="旅行名稱" value={newTrip.name} onChange={e => setNewTrip({...newTrip, name: e.target.value})} />
             <div className="flex gap-2 mb-2">
               <input type="date" className="border p-1 rounded w-1/2" value={newTrip.startDate} onChange={e => setNewTrip({...newTrip, startDate: e.target.value})} />
               <input type="date" className="border p-1 rounded w-1/2" value={newTrip.endDate} onChange={e => setNewTrip({...newTrip, endDate: e.target.value})} />
             </div>
-            <div className="flex gap-2"><button onClick={() => setIsCreating(false)} className="flex-1 bg-slate-100 py-2 rounded text-sm">取消</button><button onClick={handleCreate} className="flex-1 bg-teal-600 text-white py-2 rounded text-sm">建立</button></div>
+            <div className="flex gap-2"><button onClick={() => setIsCreating(false)} className="flex-1 bg-slate-100 py-2 rounded text-sm">取消</button><button onClick={handleCreate} className="flex-1 bg-sky-600 text-white py-2 rounded text-sm">建立</button></div>
           </div>
         )}
 
@@ -484,9 +502,9 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
           {trips.length===0 && !isCreating && <div className="text-center text-slate-400 py-8">暫無行程</div>}
           {trips.map(t => (
             <div key={t.id} onClick={() => onSelect(t.id)} className="relative bg-white rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer hover:shadow-md h-24 overflow-hidden">
-               {t.coverImage ? <><img src={t.coverImage} className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div></> : <div className="absolute inset-0 bg-gradient-to-r from-teal-50 to-white"></div>}
+               {t.coverImage ? <><img src={t.coverImage} className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div></> : <div className="absolute inset-0 bg-gradient-to-r from-sky-50 to-white"></div>}
                <div className="relative z-10 flex items-center gap-4 w-full p-4">
-                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0 ${t.coverImage?'bg-white/20 backdrop-blur text-white':'bg-teal-100 text-slate-700'}`}><Icons.Plane/></div>
+                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0 ${t.coverImage?'bg-white/20 backdrop-blur text-white':'bg-sky-100 text-slate-700'}`}><Icons.Plane/></div>
                  <div className="flex-1 min-w-0"><h3 className={`font-bold text-lg truncate ${t.coverImage?'text-white':'text-slate-800'}`}>{t.name}</h3><p className={`text-xs ${t.coverImage?'text-white/80':'text-slate-400'}`}>{t.startDate} ~ {t.endDate}</p></div>
                  <button onClick={e=>{e.stopPropagation(); setDeleteModal(t.id)}} className={`p-2 rounded-full ${t.coverImage?'text-white/80 hover:text-red-300':'text-slate-300 hover:text-red-500'}`}><Icons.Trash size={18}/></button>
                </div>
@@ -628,20 +646,20 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
                <textarea className="w-full border p-2 rounded h-32" placeholder="回憶..." value={editingItem?editingItem.text:newMem.text} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, text:v}):setNewMem({...newMem, text:v})}} />
              </>
            )}
-           <div className="flex justify-between items-center border p-2 rounded"><span className="text-xs">圖片</span><button onClick={()=>fileRef.current.click()} className="text-teal-600 font-bold"><Icons.Plus/></button><input type="file" multiple hidden ref={fileRef} onChange={e=>handleImg(e, editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments), n=>{editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))})} /></div>
+           <div className="flex justify-between items-center border p-2 rounded"><span className="text-xs">圖片</span><button onClick={()=>fileRef.current.click()} className="text-sky-600 font-bold"><Icons.Plus/></button><input type="file" multiple hidden ref={fileRef} onChange={e=>handleImg(e, editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments), n=>{editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))})} /></div>
            <div className="grid grid-cols-4 gap-2">{(editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments)).map((a,i)=><div key={i} className="relative h-16 bg-slate-100"><img src={a} className="w-full h-full object-cover"/><button onClick={()=>{const curr=editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments); const n=[...curr]; n.splice(i,1); editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))}} className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-0.5"><Icons.X size={10}/></button></div>)}</div>
            <div className="flex gap-2">
              {editingItem && <button onClick={()=>setDeleteModal({isOpen:true, id:editingItem.id, type:isItineraryEdit?'itinerary':'memories'})} className="flex-1 bg-red-100 text-red-600 py-2 rounded">刪除</button>}
-             <button onClick={()=>{ if(editingItem) handleItemAction(editingItem.activity?'itinerary':'memories', 'update', editingItem, editingItem.id); else { if(activeTab==='plan') handleItemAction('itinerary', 'add', {day, ...newItem, completed:false}); else { const n={...newMem, id:Date.now().toString(), day, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}; handleItemAction('memories', 'add', n); setEditOpen(false); setNewMem({text:'',mood:'happy',attachments:[], linkedId: ''}); } } }} className="flex-1 bg-teal-600 text-white py-2 rounded font-bold">儲存</button>
+             <button onClick={()=>{ if(editingItem) handleItemAction(editingItem.activity?'itinerary':'memories', 'update', editingItem, editingItem.id); else { if(activeTab==='plan') handleItemAction('itinerary', 'add', {day, ...newItem, completed:false}); else { const n={...newMem, id:Date.now().toString(), day, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}; handleItemAction('memories', 'add', n); setEditOpen(false); setNewMem({text:'',mood:'happy',attachments:[], linkedId: ''}); } } }} className="flex-1 bg-sky-600 text-white py-2 rounded font-bold">儲存</button>
            </div>
         </div>
       </Modal>
 
-      <header className={`relative text-white p-4 pt-8 shadow-md z-20 ${trip.coverImage?'h-40':'bg-teal-600'}`}>
+      <header className={`relative text-white p-4 pt-8 shadow-md z-20 ${trip.coverImage?'h-40':'bg-sky-600'}`}>
          {trip.coverImage && <><img src={trip.coverImage} className="absolute inset-0 w-full h-full object-cover"/><div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/80"></div></>}
          <div className="relative z-10 h-full flex flex-col justify-between">
-           <div className="flex items-center gap-3"><button onClick={onBack} className="p-1 hover:bg-white/20 rounded-full"><Icons.ArrowLeft/></button><div className="flex-1 min-w-0"><h1 className="text-xl font-bold truncate">{trip.name}</h1><p className="text-xs opacity-80">{trip.startDate} ~ {trip.endDate}</p></div><button onClick={()=>{setSettingsData({name:trip.name, startDate:trip.startDate, endDate:trip.endDate, coverImage:trip.coverImage}); setSettingsOpen(true)}} className="p-2 hover:bg-white/20 rounded-full"><Icons.Settings/></button></div>
-           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">{Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? 'bg-white text-teal-600 scale-105 shadow' : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}</div>
+           <div className="flex items-center gap-3"><button onClick={onBack} className="p-1 hover:bg-white/20 rounded-full"><Icons.Plane className="transform rotate-180"/></button><div className="flex-1 min-w-0"><h1 className="text-xl font-bold truncate">{trip.name}</h1><p className="text-xs opacity-80">{trip.startDate} ~ {trip.endDate}</p></div><button onClick={()=>{setSettingsData({name:trip.name, startDate:trip.startDate, endDate:trip.endDate, coverImage:trip.coverImage}); setSettingsOpen(true)}} className="p-2 hover:bg-white/20 rounded-full"><Icons.Settings/></button></div>
+           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">{Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? 'bg-white text-sky-600 scale-105 shadow' : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}</div>
          </div>
       </header>
 
@@ -651,19 +669,19 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
             <div className="flex justify-between items-center"><h2 className="text-lg font-bold text-slate-700 flex items-center gap-2"><Icons.Calendar/> <span>Day {day}</span><span className="text-xs bg-slate-100 px-2 rounded-full text-slate-500">{getDisplayD()}</span></h2>
             <div className="flex gap-2">
               {dailyItems.length > 0 && <button onClick={()=>setDeleteModal({isOpen:true, type:'batch_day'})} className="text-red-500 bg-white border border-red-100 p-2 rounded-full shadow-sm"><Icons.Trash/></button>}
-              <button onClick={()=>setImportOpen(true)} className="text-teal-600 bg-white border border-teal-100 p-2 rounded-full"><Icons.FileText/></button>
-              <button onClick={()=>{setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[]}); setEditOpen(true)}} className="text-white bg-teal-600 p-2 rounded-full shadow-md"><Icons.Plus/></button>
+              <button onClick={()=>setImportOpen(true)} className="text-sky-600 bg-white border border-sky-100 p-2 rounded-full"><Icons.FileText/></button>
+              <button onClick={()=>{setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[]}); setEditOpen(true)}} className="text-white bg-sky-600 p-2 rounded-full shadow-md"><Icons.Plus/></button>
             </div>
             </div>
             <div className="space-y-3 relative pl-4 border-l-2 border-slate-200 ml-2">
                {dailyItems.map((item, idx) => (
                   <div key={item.id} className="relative pl-6">
-                     <div className={`absolute -left-[21px] top-3 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10 ${item.completed ? 'bg-slate-400' : 'bg-teal-500'}`}></div>
+                     <div className={`absolute -left-[21px] top-3 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10 ${item.completed ? 'bg-slate-400' : 'bg-sky-500'}`}></div>
                      <div className={`bg-white p-3 rounded-xl shadow-sm border border-slate-100 relative ${item.completed ? 'opacity-60' : ''}`}>
                        <div className="flex justify-between items-start">
                          <div className="flex flex-col gap-1 mr-2 mt-1"><button onClick={()=>handleMove(idx, -1)} className="p-1 bg-slate-50 rounded text-slate-400"><Icons.ArrowUp/></button><button onClick={()=>handleMove(idx, 1)} className="p-1 bg-slate-50 rounded text-slate-400"><Icons.ArrowDown/></button></div>
                          <div className="flex-1 min-w-0 pr-2" onClick={()=>setEditingItem(item)}>
-                            <div className="flex items-center gap-2 mb-1"><span className="font-mono text-xs font-bold text-teal-600 bg-teal-50 px-1 rounded">{item.time}</span><span className="text-lg">{typeIcon(item.type)}</span></div>
+                            <div className="flex items-center gap-2 mb-1"><span className="font-mono text-xs font-bold text-sky-600 bg-sky-50 px-1 rounded">{item.time}</span><span className="text-lg">{typeIcon(item.type)}</span></div>
                             <h3 className="font-bold text-slate-800 text-sm truncate">{item.activity}</h3>
                             {item.location && <div className="flex items-center gap-1 text-xs text-slate-400 mt-1"><Icons.MapPin/> {item.location}</div>}
                             {(item.notes || safeAtt(item).length>0) && <div className="mt-2 bg-slate-50 p-2 rounded text-xs text-slate-600">{item.notes}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover"/>)}</div>}</div>}
@@ -686,7 +704,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
                  <div key={m.id} className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 relative" onClick={()=>setEditingItem(m)}>
                     <div className="absolute top-2 right-2 text-slate-300"><Icons.Settings/></div>
                     {safeAtt(m).length>0 && <div className="flex gap-1 mb-2">{safeAtt(m).map((a,i)=><img key={i} src={a} className="h-20 w-full object-cover rounded bg-slate-100" onClick={e=>{e.stopPropagation();setGallery({images:safeAtt(m), index:i})}}/>)}</div>}
-                    {linked && <div className="text-xs text-teal-600 bg-teal-50 inline-block px-1 rounded mb-1"><Icons.MapPin/> 於 {linked.activity}</div>}
+                    {linked && <div className="text-xs text-sky-600 bg-sky-50 inline-block px-1 rounded mb-1"><Icons.MapPin/> 於 {linked.activity}</div>}
                     <p className="text-sm text-slate-800 whitespace-pre-wrap">{m.text}</p>
                     <div className="mt-2 pt-2 border-t flex justify-between text-xs text-slate-400"><span>{m.time}</span><span title={moodData.l}>{moodData.i}</span></div>
                     <SwipeableRow onDeleteRequest={()=>setDeleteModal({isOpen:true, id:m.id, type:'memories'})} onEdit={()=>setEditingItem(m)}><div/></SwipeableRow>
@@ -698,7 +716,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-30 max-w-md mx-auto">
-         <button onClick={()=>setActiveTab('plan')} className={`flex flex-col items-center gap-1 ${activeTab==='plan'?'text-teal-600':'text-slate-300'}`}><Icons.Calendar/><span className="text-[10px] font-bold">行程</span></button>
+         <button onClick={()=>setActiveTab('plan')} className={`flex flex-col items-center gap-1 ${activeTab==='plan'?'text-sky-600':'text-slate-300'}`}><Icons.Calendar/><span className="text-[10px] font-bold">行程</span></button>
          <button onClick={()=>setActiveTab('record')} className={`flex flex-col items-center gap-1 ${activeTab==='record'?'text-indigo-600':'text-slate-300'}`}><Icons.Camera/><span className="text-[10px] font-bold">回憶</span></button>
       </nav>
     </>
