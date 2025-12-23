@@ -157,6 +157,26 @@ const Service = {
       await Service.op(tripId, 'itinerary', 'update', { ...itemA, time: itemB.time }, itemA.id);
       return await Service.op(tripId, 'itinerary', 'update', { ...itemB, time: itemA.time }, itemB.id);
     }
+  },
+  batchDelete: async (tripId, type, ids) => {
+    const rootPath = 'travel-mate-data';
+    if (Service.mode === 'cloud' && Service.db) {
+      try {
+        const batch = writeBatch(Service.db);
+        const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type];
+        ids.forEach(id => {
+          batch.delete(doc(Service.db, ...pathBase, id));
+        });
+        await batch.commit();
+        return null;
+      } catch (e) { console.error(e); return null; }
+    } else {
+      const key = tripId ? `tm_v25_${type}_${tripId}` : 'tm_v25_trips';
+      let list = SafeStorage.get(key, []);
+      list = list.filter(i => !ids.includes(i.id));
+      SafeStorage.set(key, list);
+      return list;
+    }
   }
 };
 
@@ -517,7 +537,6 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
     if (action !== 'delete') { setEditOpen(false); setEditingItem(null); }
   };
 
-  // 關鍵修復：這裡使用參數 text，而非讀取 importText
   const handleImport = async (text) => {
     if (!text) return;
     const lines = text.split('\n');
@@ -531,6 +550,12 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
       await handleItemAction('itinerary', 'add', { day, time, activity, location, type, notes: '', attachments: [], completed: false });
     }
     setImportOpen(false); setImportText('');
+  };
+
+  const performBatchDelete = async () => {
+    const ids = dailyItems.map(i => i.id);
+    const res = await Service.batchDelete(trip.id, 'itinerary', ids);
+    if (Service.mode === 'local' && res) setItems(res);
   };
 
   const handleImg = async (e, current, cb) => {
@@ -552,7 +577,6 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
     if (Service.mode === 'local') setItems(res);
   };
 
-  // 日期顯示的最終防呆
   const getDisplayD = () => getDisplayDate(trip.startDate, day);
 
   const totalDays = calculateDays(trip.startDate, trip.endDate);
@@ -565,7 +589,20 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
 
   return (
     <>
-      <ConfirmModal isOpen={deleteModal.isOpen} title="確認刪除" message="確定要刪除這個項目嗎？" onConfirm={() => { handleItemAction(deleteModal.type, 'delete', null, deleteModal.id); setDeleteModal({ isOpen: false }); }} onCancel={() => setDeleteModal({ isOpen: false })} />
+      <ConfirmModal 
+        isOpen={deleteModal.isOpen} 
+        title={deleteModal.type === 'batch_day' ? "清空當日行程" : "確認刪除"} 
+        message={deleteModal.type === 'batch_day' ? `確定要刪除 Day ${day} 的所有行程嗎？` : "確定要刪除這個項目嗎？"}
+        onConfirm={() => { 
+          if (deleteModal.type === 'batch_day') {
+             performBatchDelete();
+          } else {
+             handleItemAction(deleteModal.type, 'delete', null, deleteModal.id); 
+          }
+          setDeleteModal({ isOpen: false }); 
+        }} 
+        onCancel={() => setDeleteModal({ isOpen: false })} 
+      />
       <ImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
       <TripSettingsModal isOpen={settingsOpen} trip={trip} onClose={() => setSettingsOpen(false)} onSave={onUpdate} handleImg={handleImg} />
       {gallery && <ImageViewer images={gallery.images} initialIndex={gallery.index} onClose={() => setGallery(null)} />}
@@ -610,7 +647,13 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
       <main className="pb-24 px-4 pt-4">
         {activeTab === 'plan' ? (
           <div className="space-y-4">
-            <div className="flex justify-between items-center"><h2 className="text-lg font-bold text-slate-700 flex items-center gap-2"><Icons.Calendar/> <span>Day {day}</span><span className="text-xs bg-slate-100 px-2 rounded-full text-slate-500">{getDisplayD()}</span></h2><div className="flex gap-2"><button onClick={()=>setImportOpen(true)} className="text-teal-600 bg-white border border-teal-100 p-2 rounded-full"><Icons.FileText/></button><button onClick={()=>{setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[]}); setEditOpen(true)}} className="text-white bg-teal-600 p-2 rounded-full shadow-md"><Icons.Plus/></button></div></div>
+            <div className="flex justify-between items-center"><h2 className="text-lg font-bold text-slate-700 flex items-center gap-2"><Icons.Calendar/> <span>Day {day}</span><span className="text-xs bg-slate-100 px-2 rounded-full text-slate-500">{getDisplayD()}</span></h2>
+            <div className="flex gap-2">
+              {dailyItems.length > 0 && <button onClick={()=>setDeleteModal({isOpen:true, type:'batch_day'})} className="text-red-500 bg-white border border-red-100 p-2 rounded-full shadow-sm"><Icons.Trash/></button>}
+              <button onClick={()=>setImportOpen(true)} className="text-teal-600 bg-white border border-teal-100 p-2 rounded-full"><Icons.FileText/></button>
+              <button onClick={()=>{setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[]}); setEditOpen(true)}} className="text-white bg-teal-600 p-2 rounded-full shadow-md"><Icons.Plus/></button>
+            </div>
+            </div>
             <div className="space-y-3 relative pl-4 border-l-2 border-slate-200 ml-2">
                {dailyItems.map((item, idx) => (
                   <div key={item.id} className="relative pl-6">
