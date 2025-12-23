@@ -394,6 +394,7 @@ function AppContent() {
   const [mode, setMode] = useState('loading');
 
   useEffect(() => {
+    document.title = "我的旅行";
     Service.init().then(m => { setMode(m); setLoaded(true); });
   }, []);
 
