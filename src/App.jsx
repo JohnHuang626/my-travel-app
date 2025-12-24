@@ -73,10 +73,12 @@ const Service = {
   db: null, auth: null, user: null, mode: 'loading',
   init: async () => {
     try {
+      // 直接使用傳入的 firebaseConfig
       const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
       Service.auth = getAuth(app);
       Service.db = getFirestore(app);
 
+      // 檢查是否有 Canvas 環境的 Token，如果沒有則使用匿名登入
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
         await signInWithCustomToken(Service.auth, __initial_auth_token);
       } else {
@@ -99,8 +101,10 @@ const Service = {
   subscribe: (tripId, type, callback) => {
     if (Service.mode === 'cloud' && Service.db) {
       try {
-        const appId = firebaseConfig.projectId; 
-        const rootPath = 'travel-mate-data'; 
+        const appId = firebaseConfig.projectId; // 使用 config 中的 projectId 或其他標識
+        // 使用 'public' 路徑實現家庭共享
+        // 注意：為了簡化，這裡移除了 __app_id 依賴，直接存放在 artifacts/travel-mate/public 下
+        const rootPath = 'travel-mate-data'; // 簡化路徑，避免複雜的 appId 依賴
         let path = tripId ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] : ['artifacts', rootPath, 'public', 'data', 'trips'];
         
         let q = collection(Service.db, ...path);
@@ -178,7 +182,7 @@ const Service = {
 };
 
 // ==========================================
-// 3. UI 元件 (Modal, Input, etc.)
+// 3. UI 元件 (Modal, Input, etc.) - 先定義
 // ==========================================
 const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
@@ -247,16 +251,52 @@ const ImageViewer = ({ images, initialIndex, onClose }) => {
   );
 };
 
+// FIX: SwipeableRow now correctly wraps content instead of empty div
 const SwipeableRow = ({ children, onDeleteRequest, onEdit }) => {
   const [offset, setOffset] = useState(0);
   const startX = useRef(0);
   const handleStart = (cx) => { startX.current = cx; };
   const handleMove = (cx) => { const diff = cx - startX.current; if (diff < 0) setOffset(Math.max(diff, -80)); };
   const handleEnd = () => setOffset(offset < -40 ? -80 : 0);
+  
   return (
-    <div className="relative w-full rounded-xl mb-4 h-auto select-none overflow-hidden group touch-pan-y">
-      <div className="absolute inset-0 bg-red-500 rounded-xl flex justify-end items-center z-0"><button onClick={(e) => { e.stopPropagation(); onDeleteRequest(() => setOffset(0)); }} className="w-20 h-full flex flex-col items-center justify-center text-white active:bg-red-600 transition-colors"><Icons.Trash size={20} /><span className="text-[10px] font-bold mt-1">刪除</span></button></div>
-      <div className="relative z-10 bg-white rounded-xl shadow-sm border border-slate-100 transition-transform duration-200 ease-out" style={{ transform: `translateX(${offset}px)` }} onTouchStart={e => handleStart(e.touches[0].clientX)} onTouchMove={e => handleMove(e.touches[0].clientX)} onTouchEnd={handleEnd} onMouseDown={e => handleStart(e.clientX)} onMouseMove={e => handleMove(e.clientX)} onMouseUp={handleEnd} onMouseLeave={handleEnd} onClick={() => { if (offset < 0) setOffset(0); else onEdit(); }}>{children}</div>
+    <div className="relative w-full mb-4 h-auto select-none group touch-pan-y">
+      {/* Background (Delete Button) */}
+      <div className="absolute inset-0 bg-red-500 rounded-xl flex justify-end items-center z-0 pr-1">
+        <button 
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            onDeleteRequest(() => setOffset(0)); 
+          }} 
+          className="w-20 h-full flex flex-col items-center justify-center text-white active:bg-red-600 transition-colors"
+        >
+          <Icons.Trash size={20} />
+          <span className="text-[10px] font-bold mt-1">刪除</span>
+        </button>
+      </div>
+      
+      {/* Foreground (Content) */}
+      <div 
+        className="relative z-10 bg-white rounded-xl shadow-sm border border-slate-100 transition-transform duration-200 ease-out" 
+        style={{ transform: `translateX(${offset}px)` }} 
+        onTouchStart={e => handleStart(e.touches[0].clientX)} 
+        onTouchMove={e => handleMove(e.touches[0].clientX)} 
+        onTouchEnd={handleEnd} 
+        onMouseDown={e => handleStart(e.clientX)} 
+        onMouseMove={e => handleMove(e.clientX)} 
+        onMouseUp={handleEnd} 
+        onMouseLeave={handleEnd} 
+        onClick={(e) => { 
+          if (offset < 0) {
+             setOffset(0); 
+             e.stopPropagation();
+          } else {
+             onEdit(); 
+          }
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 };
@@ -464,7 +504,9 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
   const handleItemAction = async (type, action, data, id) => {
     const res = await Service.op(trip.id, type, action, data, id);
     if (Service.mode === 'local' && res) type === 'itinerary' ? setItems(res) : setMemories(res);
-    if (action !== 'delete') { setEditOpen(false); setEditingItem(null); }
+    // FIX: 刪除操作後也必須關閉 Modal 和清除選取狀態
+    setEditOpen(false); 
+    setEditingItem(null); 
   };
 
   const handleImport = async (text) => {
@@ -560,6 +602,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
            <div className="flex justify-between items-center border p-2 rounded"><span className="text-xs">圖片</span><button onClick={()=>fileRef.current.click()} className="text-sky-600 font-bold"><Icons.Plus/></button><input type="file" multiple hidden ref={fileRef} onChange={e=>handleImg(e, editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments), n=>{editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))})} /></div>
            <div className="grid grid-cols-4 gap-2">{(editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments)).map((a,i)=><div key={i} className="relative h-16 bg-slate-100"><img src={a} className="w-full h-full object-cover"/><button onClick={()=>{const curr=editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments); const n=[...curr]; n.splice(i,1); editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))}} className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-0.5"><Icons.X size={10}/></button></div>)}</div>
            <div className="flex gap-2">
+             {/* Delete Button inside Edit Modal */}
              {editingItem && <button onClick={()=>setDeleteModal({isOpen:true, id:editingItem.id, type:isItineraryEdit?'itinerary':'memories'})} className="flex-1 bg-red-100 text-red-600 py-2 rounded">刪除</button>}
              <button onClick={()=>{ if(editingItem) handleItemAction(editingItem.activity?'itinerary':'memories', 'update', editingItem, editingItem.id); else { if(activeTab==='plan') handleItemAction('itinerary', 'add', {day, ...newItem, completed:false}); else { const n={...newMem, id:Date.now().toString(), day, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}; handleItemAction('memories', 'add', n); setEditOpen(false); setNewMem({text:'',mood:'happy',attachments:[], linkedId: ''}); } } }} className="flex-1 bg-sky-600 text-white py-2 rounded font-bold">儲存</button>
            </div>
@@ -586,22 +629,21 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
             </div>
             <div className="space-y-3 relative pl-4 border-l-2 border-slate-200 ml-2">
                {dailyItems.map((item, idx) => (
-                  <div key={item.id} className="relative pl-6">
-                     <div className={`absolute -left-[21px] top-3 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10 ${item.completed ? 'bg-slate-400' : 'bg-sky-500'}`}></div>
-                     <div className={`bg-white p-3 rounded-xl shadow-sm border border-slate-100 relative ${item.completed ? 'opacity-60' : ''}`}>
+                  <SwipeableRow key={item.id} onDeleteRequest={()=>setDeleteModal({isOpen:true, id:item.id, type:'itinerary'})} onEdit={()=>setEditingItem(item)}>
+                     <div className={`p-3 relative ${item.completed ? 'opacity-60' : ''}`}>
+                       <div className={`absolute -left-[30px] top-3 w-4 h-4 rounded-full border-2 border-white shadow-sm z-20 ${item.completed ? 'bg-slate-400' : 'bg-sky-500'}`}></div>
                        <div className="flex justify-between items-start">
-                         <div className="flex flex-col gap-1 mr-2 mt-1"><button onClick={()=>handleMove(idx, -1)} className="p-1 bg-slate-50 rounded text-slate-400"><Icons.ArrowUp/></button><button onClick={()=>handleMove(idx, 1)} className="p-1 bg-slate-50 rounded text-slate-400"><Icons.ArrowDown/></button></div>
-                         <div className="flex-1 min-w-0 pr-2" onClick={()=>setEditingItem(item)}>
+                         <div className="flex flex-col gap-1 mr-2 mt-1"><button onClick={(e)=>{e.stopPropagation(); handleMove(idx, -1)}} className="p-1 bg-slate-50 rounded text-slate-400"><Icons.ArrowUp/></button><button onClick={(e)=>{e.stopPropagation(); handleMove(idx, 1)}} className="p-1 bg-slate-50 rounded text-slate-400"><Icons.ArrowDown/></button></div>
+                         <div className="flex-1 min-w-0 pr-2">
                             <div className="flex items-center gap-2 mb-1"><span className="font-mono text-xs font-bold text-sky-600 bg-sky-50 px-1 rounded">{item.time}</span><span className="text-lg">{typeIcon(item.type)}</span></div>
                             <h3 className="font-bold text-slate-800 text-sm truncate">{item.activity}</h3>
                             {item.location && <div className="flex items-center gap-1 text-xs text-slate-400 mt-1"><Icons.MapPin/> {item.location}</div>}
                             {(item.notes || safeAtt(item).length>0) && <div className="mt-2 bg-slate-50 p-2 rounded text-xs text-slate-600">{item.notes}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover"/>)}</div>}</div>}
                          </div>
-                         <div className="flex flex-col gap-2 border-l pl-2"><button onClick={()=>handleItemAction('itinerary', 'update', {completed:!item.completed}, item.id)} className={`mt-1 ${item.completed?'text-green-500':'text-slate-300'}`}><Icons.Check/></button><button onClick={()=>setEditingItem(item)} className="text-slate-300"><Icons.Settings/></button></div>
+                         <div className="flex flex-col gap-2 border-l pl-2"><button onClick={(e)=>{e.stopPropagation(); handleItemAction('itinerary', 'update', {completed:!item.completed}, item.id)}} className={`mt-1 ${item.completed?'text-green-500':'text-slate-300'}`}><Icons.Check/></button><button onClick={(e)=>{e.stopPropagation(); setEditingItem(item)}} className="text-slate-300"><Icons.Settings/></button></div>
                        </div>
-                       <SwipeableRow onDeleteRequest={()=>setDeleteModal({isOpen:true, id:item.id, type:'itinerary'})} onEdit={()=>setEditingItem(item)}><div/></SwipeableRow>
                      </div>
-                  </div>
+                  </SwipeableRow>
                ))}
             </div>
           </div>
@@ -612,14 +654,15 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
                const linked = dailyItems.find(i=>i.id===m.linkedId);
                const moodData = MOODS.find(x=>x.k===m.mood) || MOODS[0];
                return (
-                 <div key={m.id} className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 relative" onClick={()=>setEditingItem(m)}>
-                    <div className="absolute top-2 right-2 text-slate-300"><Icons.Settings/></div>
-                    {safeAtt(m).length>0 && <div className="flex gap-1 mb-2">{safeAtt(m).map((a,i)=><img key={i} src={a} className="h-20 w-full object-cover rounded bg-slate-100" onClick={e=>{e.stopPropagation();setGallery({images:safeAtt(m), index:i})}}/>)}</div>}
-                    {linked && <div className="text-xs text-sky-600 bg-sky-50 inline-block px-1 rounded mb-1"><Icons.MapPin/> 於 {linked.activity}</div>}
-                    <p className="text-sm text-slate-800 whitespace-pre-wrap">{m.text}</p>
-                    <div className="mt-2 pt-2 border-t flex justify-between text-xs text-slate-400"><span>{m.time}</span><span title={moodData.l}>{moodData.i}</span></div>
-                    <SwipeableRow onDeleteRequest={()=>setDeleteModal({isOpen:true, id:m.id, type:'memories'})} onEdit={()=>setEditingItem(m)}><div/></SwipeableRow>
-                 </div>
+                 <SwipeableRow key={m.id} onDeleteRequest={()=>setDeleteModal({isOpen:true, id:m.id, type:'memories'})} onEdit={()=>setEditingItem(m)}>
+                    <div className="p-3 relative">
+                      <div className="absolute top-2 right-2 text-slate-300"><Icons.Settings/></div>
+                      {safeAtt(m).length>0 && <div className="flex gap-1 mb-2">{safeAtt(m).map((a,i)=><img key={i} src={a} className="h-20 w-full object-cover rounded bg-slate-100" onClick={e=>{e.stopPropagation();setGallery({images:safeAtt(m), index:i})}}/>)}</div>}
+                      {linked && <div className="text-xs text-sky-600 bg-sky-50 inline-block px-1 rounded mb-1"><Icons.MapPin/> 於 {linked.activity}</div>}
+                      <p className="text-sm text-slate-800 whitespace-pre-wrap">{m.text}</p>
+                      <div className="mt-2 pt-2 border-t flex justify-between text-xs text-slate-400"><span>{m.time}</span><span title={moodData.l}>{moodData.i}</span></div>
+                    </div>
+                 </SwipeableRow>
                );
             })}
           </div>
