@@ -73,12 +73,10 @@ const Service = {
   db: null, auth: null, user: null, mode: 'loading',
   init: async () => {
     try {
-      // 直接使用傳入的 firebaseConfig
       const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
       Service.auth = getAuth(app);
       Service.db = getFirestore(app);
 
-      // 檢查是否有 Canvas 環境的 Token，如果沒有則使用匿名登入
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
         await signInWithCustomToken(Service.auth, __initial_auth_token);
       } else {
@@ -101,10 +99,8 @@ const Service = {
   subscribe: (tripId, type, callback) => {
     if (Service.mode === 'cloud' && Service.db) {
       try {
-        const appId = firebaseConfig.projectId; // 使用 config 中的 projectId 或其他標識
-        // 使用 'public' 路徑實現家庭共享
-        // 注意：為了簡化，這裡移除了 __app_id 依賴，直接存放在 artifacts/travel-mate/public 下
-        const rootPath = 'travel-mate-data'; // 簡化路徑，避免複雜的 appId 依賴
+        const appId = firebaseConfig.projectId; 
+        const rootPath = 'travel-mate-data'; 
         let path = tripId ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] : ['artifacts', rootPath, 'public', 'data', 'trips'];
         
         let q = collection(Service.db, ...path);
@@ -182,7 +178,7 @@ const Service = {
 };
 
 // ==========================================
-// 3. UI 元件 (Modal, Input, etc.) - 先定義
+// 3. UI 元件 (Modal, Input, etc.)
 // ==========================================
 const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
@@ -312,7 +308,7 @@ const TripSettingsModal = ({ isOpen, trip, onClose, onSave, handleImg }) => {
 };
 
 // ==========================================
-// 4. 錯誤邊界
+// 4. 錯誤邊界與輔助函數
 // ==========================================
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
@@ -347,7 +343,6 @@ const resizeImage = (file) => new Promise(resolve => {
   };
 });
 
-// 日期計算與顯示 (加強容錯)
 const calculateDays = (s, e) => { 
   try { 
     if(!s || !e) return 1;
@@ -358,7 +353,6 @@ const calculateDays = (s, e) => {
   } catch { return 1; } 
 };
 
-// 日期顯示防呆：解決 Invalid Date
 const getDisplayDate = (start, dayIdx) => {
   if (!start) return `Day ${dayIdx}`;
   try {
@@ -378,119 +372,8 @@ const MOODS = [
 const TYPE_ICONS = { fun:'🎡', food:'🍜', shopping:'🛍️', transport:'🚆', stay:'🏨' };
 
 // ==========================================
-// 5. 主程式入口
+// 5. 核心頁面元件 (移至上方以避免 ReferenceError)
 // ==========================================
-export default function App() {
-  return (
-    <ErrorBoundary>
-      <AppContent />
-    </ErrorBoundary>
-  );
-}
-
-function AppContent() {
-  const [trips, setTrips] = useState([]);
-  const [activeTripId, setActiveTripId] = useState(null);
-  const [loaded, setLoaded] = useState(false);
-  const [mode, setMode] = useState('loading');
-
-  useEffect(() => {
-    document.title = "我的旅程";
-    
-    // 設定網頁圖示 (Favicon & Apple Touch Icon) - Sky Blue 主題 (#0ea5e9)
-    // 飛機為白色，背景為天空藍
-    const svgIcon = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 fill=%22%230ea5e9%22 rx=%220%22/><path fill=%22white%22 d=%22M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z%22/></svg>`;
-
-    // 1. 強制清除所有舊的圖示設定
-    const oldLinks = document.querySelectorAll("link[rel*='icon'], link[rel='manifest']");
-    oldLinks.forEach(link => link.remove());
-
-    // 2. 設定標準 Favicon
-    const linkIcon = document.createElement('link');
-    linkIcon.rel = 'icon';
-    linkIcon.type = 'image/svg+xml';
-    linkIcon.href = svgIcon;
-    document.head.appendChild(linkIcon);
-
-    // 3. 設定 iOS 主畫面圖示 (Apple Touch Icon)
-    const linkApple = document.createElement('link');
-    linkApple.rel = 'apple-touch-icon';
-    linkApple.href = svgIcon;
-    document.head.appendChild(linkApple);
-
-    // 4. 動態生成 Manifest (對 Android "加入主畫面" 非常關鍵)
-    const manifest = {
-      name: "我的旅程",
-      short_name: "TravelMate",
-      start_url: ".",
-      display: "standalone",
-      background_color: "#ffffff",
-      theme_color: "#0ea5e9",
-      icons: [{
-        src: svgIcon,
-        sizes: "192x192",
-        type: "image/svg+xml",
-        purpose: "any maskable"
-      }]
-    };
-    
-    // 使用 Data URI 注入 Manifest，避免 Blob URL 跨域或過期問題
-    const manifestUrl = `data:application/manifest+json,${encodeURIComponent(JSON.stringify(manifest))}`;
-    const linkManifest = document.createElement('link');
-    linkManifest.rel = 'manifest';
-    linkManifest.href = manifestUrl;
-    document.head.appendChild(linkManifest);
-
-    Service.init().then(m => { setMode(m); setLoaded(true); });
-  }, []);
-
-  useEffect(() => {
-    if (loaded) {
-      const unsub = Service.subscribe(null, null, (data) => setTrips(data || []));
-      return () => unsub && unsub();
-    }
-  }, [loaded, mode]);
-
-  const activeTrip = trips.find(t => t.id === activeTripId);
-
-  const addTrip = async (t) => {
-    const res = await Service.op(null, null, 'add', t);
-    if(res) setTrips(res);
-  };
-  const deleteTrip = async (id) => {
-    const res = await Service.op(null, null, 'delete', null, id);
-    if(res) setTrips(res);
-  };
-  const updateTrip = async (data) => {
-    const res = await Service.op(null, null, 'update', data, activeTrip.id);
-    if(res) setTrips(res);
-  };
-
-  if (!loaded) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading...</div>;
-
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 max-w-md mx-auto shadow-2xl overflow-hidden border-x border-slate-200 relative">
-      <button onClick={()=>{if(confirm('重置所有資料?')){localStorage.clear(); window.location.reload();}}} className="fixed bottom-1 left-1 z-50 p-2 text-slate-300 hover:text-red-500 opacity-50"><Icons.Refresh size={12}/></button>
-
-      {activeTrip ? (
-        <TripDetail 
-          trip={activeTrip} 
-          mode={mode}
-          onUpdate={(d) => updateTrip(d)}
-          onBack={() => setActiveTripId(null)}
-        />
-      ) : (
-        <TripList 
-          trips={trips} 
-          onAdd={addTrip} 
-          onDelete={deleteTrip} 
-          onSelect={setActiveTripId} 
-          mode={mode}
-        />
-      )}
-    </div>
-  );
-}
 
 // === Trip List ===
 function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
@@ -748,5 +631,117 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
          <button onClick={()=>setActiveTab('record')} className={`flex flex-col items-center gap-1 ${activeTab==='record'?'text-indigo-600':'text-slate-300'}`}><Icons.Camera/><span className="text-[10px] font-bold">回憶</span></button>
       </nav>
     </>
+  );
+}
+
+// ==========================================
+// 6. 主程式 (AppContent & Export)
+// ==========================================
+
+function AppContent() {
+  const [trips, setTrips] = useState([]);
+  const [activeTripId, setActiveTripId] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  const [mode, setMode] = useState('loading');
+
+  useEffect(() => {
+    document.title = "我的旅程";
+    
+    const setFavicon = () => {
+      const oldLinks = document.querySelectorAll("link[rel*='icon'], link[rel='manifest']");
+      oldLinks.forEach(link => link.remove());
+
+      const svgIcon = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 width=%22512%22 height=%22512%22><rect width=%2224%22 height=%2224%22 fill=%22%230ea5e9%22 rx=%220%22/><path fill=%22white%22 d=%22M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z%22/></svg>`;
+
+      const linkIcon = document.createElement('link');
+      linkIcon.rel = 'icon';
+      linkIcon.type = 'image/svg+xml';
+      linkIcon.href = svgIcon;
+      document.head.appendChild(linkIcon);
+
+      const linkApple = document.createElement('link');
+      linkApple.rel = 'apple-touch-icon';
+      linkApple.href = svgIcon;
+      document.head.appendChild(linkApple);
+
+      const manifest = {
+        name: "我的旅程",
+        short_name: "TravelMate",
+        start_url: ".",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#0ea5e9",
+        icons: [{
+          src: svgIcon,
+          sizes: "512x512",
+          type: "image/svg+xml",
+          purpose: "any maskable"
+        }]
+      };
+      
+      const manifestUrl = `data:application/manifest+json,${encodeURIComponent(JSON.stringify(manifest))}`;
+      const linkManifest = document.createElement('link');
+      linkManifest.rel = 'manifest';
+      linkManifest.href = manifestUrl;
+      document.head.appendChild(linkManifest);
+    };
+    setFavicon();
+
+    Service.init().then(m => { setMode(m); setLoaded(true); });
+  }, []);
+
+  useEffect(() => {
+    if (loaded) {
+      const unsub = Service.subscribe(null, null, (data) => setTrips(data || []));
+      return () => unsub && unsub();
+    }
+  }, [loaded, mode]);
+
+  const activeTrip = trips.find(t => t.id === activeTripId);
+
+  const addTrip = async (t) => {
+    const res = await Service.op(null, null, 'add', t);
+    if(res) setTrips(res);
+  };
+  const deleteTrip = async (id) => {
+    const res = await Service.op(null, null, 'delete', null, id);
+    if(res) setTrips(res);
+  };
+  const updateTrip = async (data) => {
+    const res = await Service.op(null, null, 'update', data, activeTrip.id);
+    if(res) setTrips(res);
+  };
+
+  if (!loaded) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading...</div>;
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 max-w-md mx-auto shadow-2xl overflow-hidden border-x border-slate-200 relative">
+      <button onClick={()=>{if(confirm('重置所有資料?')){localStorage.clear(); window.location.reload();}}} className="fixed bottom-1 left-1 z-50 p-2 text-slate-300 hover:text-red-500 opacity-50"><Icons.Refresh size={12}/></button>
+
+      {activeTrip ? (
+        <TripDetail 
+          trip={activeTrip} 
+          mode={mode}
+          onUpdate={(d) => updateTrip(d)}
+          onBack={() => setActiveTripId(null)}
+        />
+      ) : (
+        <TripList 
+          trips={trips} 
+          onAdd={addTrip} 
+          onDelete={deleteTrip} 
+          onSelect={setActiveTripId} 
+          mode={mode}
+        />
+      )}
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 }
