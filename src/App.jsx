@@ -110,7 +110,9 @@ const Service = {
         if (!tripId) q = query(q, orderBy('startDate', 'desc'));
         else if (type === 'itinerary') q = query(q, orderBy('time', 'asc'));
         else q = query(q, orderBy('createdAt', 'desc'));
-        return onSnapshot(q, (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))), () => callback([]));
+        
+        // FIX 1: 修正 ID 覆蓋問題，確保 d.id (Firestore ID) 優先於 d.data().id
+        return onSnapshot(q, (snap) => callback(snap.docs.map(d => ({ ...d.data(), id: d.id }))), () => callback([]));
       } catch { return () => {}; }
     } else {
       const key = tripId ? `tm_v25_${type}_${tripId}` : 'tm_v25_trips';
@@ -576,7 +578,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
            <div className="flex gap-2">
              {/* Delete Button inside Edit Modal */}
              {editingItem && <button onClick={()=>setDeleteModal({isOpen:true, id:editingItem.id, type:isItineraryEdit?'itinerary':'memories'})} className="flex-1 bg-red-100 text-red-600 py-2 rounded">刪除</button>}
-             <button onClick={()=>{ if(editingItem) handleItemAction(editingItem.activity?'itinerary':'memories', 'update', editingItem, editingItem.id); else { if(activeTab==='plan') handleItemAction('itinerary', 'add', {day, ...newItem, completed:false}); else { const n={...newMem, id:Date.now().toString(), day, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}; handleItemAction('memories', 'add', n); setEditOpen(false); setNewMem({text:'',mood:'happy',attachments:[], linkedId: ''}); } } }} className="flex-1 bg-sky-600 text-white py-2 rounded font-bold">儲存</button>
+             <button onClick={()=>{ if(editingItem) handleItemAction(editingItem.activity?'itinerary':'memories', 'update', editingItem, editingItem.id); else { if(activeTab==='plan') handleItemAction('itinerary', 'add', {day, ...newItem, completed:false}); else { const n={...newMem, day, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}; handleItemAction('memories', 'add', n); setEditOpen(false); setNewMem({text:'',mood:'happy',attachments:[], linkedId: ''}); } } }} className="flex-1 bg-sky-600 text-white py-2 rounded font-bold">儲存</button>
            </div>
         </div>
       </Modal>
