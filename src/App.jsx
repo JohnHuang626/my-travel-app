@@ -16,7 +16,7 @@ const firebaseConfig = {
 };
 
 // ==========================================
-// 1. 純 SVG 圖示系統 (零外部依賴)
+// 1. 純 SVG 圖示系統
 // ==========================================
 const SvgIcon = ({ d, size = 20, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -25,7 +25,6 @@ const SvgIcon = ({ d, size = 20, className = "" }) => (
 );
 
 const Icons = {
-  // 經典飛機造型 (類似 ✈️ Emoji)
   Plane: (p) => <SvgIcon {...p} fill="currentColor" stroke="none" d={<path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>} />,
   Calendar: (p) => <SvgIcon {...p} d={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>} />,
   Camera: (p) => <SvgIcon {...p} d={<><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>} />,
@@ -73,12 +72,10 @@ const Service = {
   db: null, auth: null, user: null, mode: 'loading',
   init: async () => {
     try {
-      // 直接使用傳入的 firebaseConfig
       const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
       Service.auth = getAuth(app);
       Service.db = getFirestore(app);
 
-      // 檢查是否有 Canvas 環境的 Token，如果沒有則使用匿名登入
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
         await signInWithCustomToken(Service.auth, __initial_auth_token);
       } else {
@@ -101,10 +98,8 @@ const Service = {
   subscribe: (tripId, type, callback) => {
     if (Service.mode === 'cloud' && Service.db) {
       try {
-        const appId = firebaseConfig.projectId; // 使用 config 中的 projectId 或其他標識
-        // 使用 'public' 路徑實現家庭共享
-        // 注意：為了簡化，這裡移除了 __app_id 依賴，直接存放在 artifacts/travel-mate/public 下
-        const rootPath = 'travel-mate-data'; // 簡化路徑，避免複雜的 appId 依賴
+        const appId = firebaseConfig.projectId;
+        const rootPath = 'travel-mate-data'; 
         let path = tripId ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] : ['artifacts', rootPath, 'public', 'data', 'trips'];
         
         let q = collection(Service.db, ...path);
@@ -129,7 +124,13 @@ const Service = {
         else if (action === 'update') await updateDoc(doc(colRef, id), data);
         else if (action === 'delete') await deleteDoc(doc(colRef, id));
         return null;
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+        console.error("Firebase Operation Failed:", e);
+        if (e.code === 'permission-denied') {
+          alert("操作失敗：權限不足 (Permission Denied)\n請檢查 Firebase 規則。");
+        }
+        return null;
+      }
     }
     const key = tripId ? `tm_v25_${type}_${tripId}` : 'tm_v25_trips';
     let list = SafeStorage.get(key, []);
@@ -164,7 +165,7 @@ const Service = {
     if (Service.mode === 'cloud' && Service.db) {
       try {
         const batch = writeBatch(Service.db);
-        const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, 'itinerary'];
+        const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type];
         ids.forEach(id => {
           batch.delete(doc(Service.db, ...pathBase, id));
         });
@@ -182,7 +183,7 @@ const Service = {
 };
 
 // ==========================================
-// 3. UI 元件 (Modal, Input, etc.) - 先定義
+// 3. UI 元件 (Modal, Input, etc.)
 // ==========================================
 const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
@@ -251,52 +252,16 @@ const ImageViewer = ({ images, initialIndex, onClose }) => {
   );
 };
 
-// FIX: SwipeableRow now correctly wraps content instead of empty div
 const SwipeableRow = ({ children, onDeleteRequest, onEdit }) => {
   const [offset, setOffset] = useState(0);
   const startX = useRef(0);
   const handleStart = (cx) => { startX.current = cx; };
   const handleMove = (cx) => { const diff = cx - startX.current; if (diff < 0) setOffset(Math.max(diff, -80)); };
   const handleEnd = () => setOffset(offset < -40 ? -80 : 0);
-  
   return (
-    <div className="relative w-full mb-4 h-auto select-none group touch-pan-y">
-      {/* Background (Delete Button) */}
-      <div className="absolute inset-0 bg-red-500 rounded-xl flex justify-end items-center z-0 pr-1">
-        <button 
-          onClick={(e) => { 
-            e.stopPropagation(); 
-            onDeleteRequest(() => setOffset(0)); 
-          }} 
-          className="w-20 h-full flex flex-col items-center justify-center text-white active:bg-red-600 transition-colors"
-        >
-          <Icons.Trash size={20} />
-          <span className="text-[10px] font-bold mt-1">刪除</span>
-        </button>
-      </div>
-      
-      {/* Foreground (Content) */}
-      <div 
-        className="relative z-10 bg-white rounded-xl shadow-sm border border-slate-100 transition-transform duration-200 ease-out" 
-        style={{ transform: `translateX(${offset}px)` }} 
-        onTouchStart={e => handleStart(e.touches[0].clientX)} 
-        onTouchMove={e => handleMove(e.touches[0].clientX)} 
-        onTouchEnd={handleEnd} 
-        onMouseDown={e => handleStart(e.clientX)} 
-        onMouseMove={e => handleMove(e.clientX)} 
-        onMouseUp={handleEnd} 
-        onMouseLeave={handleEnd} 
-        onClick={(e) => { 
-          if (offset < 0) {
-             setOffset(0); 
-             e.stopPropagation();
-          } else {
-             onEdit(); 
-          }
-        }}
-      >
-        {children}
-      </div>
+    <div className="relative w-full rounded-xl mb-4 h-auto select-none overflow-hidden group touch-pan-y">
+      <div className="absolute inset-0 bg-red-500 rounded-xl flex justify-end items-center z-0"><button onClick={(e) => { e.stopPropagation(); onDeleteRequest(() => setOffset(0)); }} className="w-20 h-full flex flex-col items-center justify-center text-white active:bg-red-600 transition-colors"><Icons.Trash size={20} /><span className="text-[10px] font-bold mt-1">刪除</span></button></div>
+      <div className="relative z-10 bg-white rounded-xl shadow-sm border border-slate-100 transition-transform duration-200 ease-out" style={{ transform: `translateX(${offset}px)` }} onTouchStart={e => handleStart(e.touches[0].clientX)} onTouchMove={e => handleMove(e.touches[0].clientX)} onTouchEnd={handleEnd} onMouseDown={e => handleStart(e.clientX)} onMouseMove={e => handleMove(e.clientX)} onMouseUp={handleEnd} onMouseLeave={handleEnd} onClick={() => { if (offset < 0) setOffset(0); else onEdit(); }}>{children}</div>
     </div>
   );
 };
