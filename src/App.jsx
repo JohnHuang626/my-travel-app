@@ -397,29 +397,49 @@ function AppContent() {
   useEffect(() => {
     document.title = "我的旅程";
     
-    // 設定網頁圖示 (Favicon & Apple Touch Icon)
-    const setFavicon = () => {
-      // 移除舊的圖示連結以確保更新
-      const oldLinks = document.querySelectorAll("link[rel*='icon']");
-      oldLinks.forEach(link => link.remove());
+    // 設定網頁圖示 (Favicon & Apple Touch Icon) - Sky Blue 主題 (#0ea5e9)
+    // 飛機為白色，背景為天空藍
+    const svgIcon = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 fill=%22%230ea5e9%22 rx=%220%22/><path fill=%22white%22 d=%22M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z%22/></svg>`;
 
-      // 飛機圖示：Sky Blue 背景 (#0ea5e9)，白色飛機
-      const svgIcon = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 fill=%22%230ea5e9%22 rx=%224%22/><path fill=%22white%22 d=%22M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z%22/></svg>`;
+    // 1. 強制清除所有舊的圖示設定
+    const oldLinks = document.querySelectorAll("link[rel*='icon'], link[rel='manifest']");
+    oldLinks.forEach(link => link.remove());
 
-      // 設定標準 Favicon
-      const link = document.createElement('link');
-      link.type = 'image/svg+xml';
-      link.rel = 'icon';
-      link.href = svgIcon;
-      document.head.appendChild(link);
+    // 2. 設定標準 Favicon
+    const linkIcon = document.createElement('link');
+    linkIcon.rel = 'icon';
+    linkIcon.type = 'image/svg+xml';
+    linkIcon.href = svgIcon;
+    document.head.appendChild(linkIcon);
 
-      // 設定 Apple Touch Icon (iOS 主畫面)
-      const appleLink = document.createElement('link');
-      appleLink.rel = 'apple-touch-icon';
-      appleLink.href = svgIcon; // iOS 11.3+ 支援 SVG data URI
-      document.head.appendChild(appleLink);
+    // 3. 設定 iOS 主畫面圖示 (Apple Touch Icon)
+    const linkApple = document.createElement('link');
+    linkApple.rel = 'apple-touch-icon';
+    linkApple.href = svgIcon;
+    document.head.appendChild(linkApple);
+
+    // 4. 動態生成 Manifest (對 Android "加入主畫面" 非常關鍵)
+    const manifest = {
+      name: "我的旅程",
+      short_name: "TravelMate",
+      start_url: ".",
+      display: "standalone",
+      background_color: "#ffffff",
+      theme_color: "#0ea5e9",
+      icons: [{
+        src: svgIcon,
+        sizes: "192x192",
+        type: "image/svg+xml",
+        purpose: "any maskable"
+      }]
     };
-    setFavicon();
+    
+    // 使用 Data URI 注入 Manifest，避免 Blob URL 跨域或過期問題
+    const manifestUrl = `data:application/manifest+json,${encodeURIComponent(JSON.stringify(manifest))}`;
+    const linkManifest = document.createElement('link');
+    linkManifest.rel = 'manifest';
+    linkManifest.href = manifestUrl;
+    document.head.appendChild(linkManifest);
 
     Service.init().then(m => { setMode(m); setLoaded(true); });
   }, []);
