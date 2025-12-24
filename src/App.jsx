@@ -110,8 +110,6 @@ const Service = {
         if (!tripId) q = query(q, orderBy('startDate', 'desc'));
         else if (type === 'itinerary') q = query(q, orderBy('time', 'asc'));
         else q = query(q, orderBy('createdAt', 'desc'));
-        
-        // FIX 1: 修正 ID 覆蓋問題，確保 d.id (Firestore ID) 優先於 d.data().id
         return onSnapshot(q, (snap) => callback(snap.docs.map(d => ({ ...d.data(), id: d.id }))), () => callback([]));
       } catch { return () => {}; }
     } else {
@@ -574,7 +572,8 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
              </>
            )}
            <div className="flex justify-between items-center border p-2 rounded"><span className="text-xs">圖片</span><button onClick={()=>fileRef.current.click()} className="text-sky-600 font-bold"><Icons.Plus/></button><input type="file" multiple hidden ref={fileRef} onChange={e=>handleImg(e, editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments), n=>{editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))})} /></div>
-           <div className="grid grid-cols-4 gap-2">{(editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments)).map((a,i)=><div key={i} className="relative h-16 bg-slate-100"><img src={a} className="w-full h-full object-cover"/><button onClick={()=>{const curr=editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments); const n=[...curr]; n.splice(i,1); editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))}} className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-0.5"><Icons.X size={10}/></button></div>)}</div>
+           <div className="grid grid-cols-4 gap-2">{(editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments)).map((a,i)=><div key={i} className="relative h-16 bg-slate-100"><img src={a} className="w-full h-full object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(editingItem?editingItem:(activeTab==='plan'?newItem:newMem)), index:i})}}/>
+             <button onClick={()=>{const curr=editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments); const n=[...curr]; n.splice(i,1); editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))}} className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-0.5"><Icons.X size={10}/></button></div>)}</div>
            <div className="flex gap-2">
              {/* Delete Button inside Edit Modal */}
              {editingItem && <button onClick={()=>setDeleteModal({isOpen:true, id:editingItem.id, type:isItineraryEdit?'itinerary':'memories'})} className="flex-1 bg-red-100 text-red-600 py-2 rounded">刪除</button>}
@@ -610,9 +609,9 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
                          <div className="flex flex-col gap-1 mr-2 mt-1"><button onClick={(e)=>{e.stopPropagation(); handleMove(idx, -1)}} className="p-1 bg-slate-50 rounded text-slate-400"><Icons.ArrowUp/></button><button onClick={(e)=>{e.stopPropagation(); handleMove(idx, 1)}} className="p-1 bg-slate-50 rounded text-slate-400"><Icons.ArrowDown/></button></div>
                          <div className="flex-1 min-w-0 pr-2">
                             <div className="flex items-center gap-2 mb-1"><span className="font-mono text-xs font-bold text-sky-600 bg-sky-50 px-1 rounded">{item.time}</span><span className="text-lg">{typeIcon(item.type)}</span></div>
-                            <h3 className="font-bold text-slate-800 text-sm truncate">{item.activity}</h3>
-                            {item.location && <div className="flex items-center gap-1 text-xs text-slate-400 mt-1"><Icons.MapPin/> {item.location}</div>}
-                            {(item.notes || safeAtt(item).length>0) && <div className="mt-2 bg-slate-50 p-2 rounded text-xs text-slate-600">{item.notes}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover"/>)}</div>}</div>}
+                            <h3 className="font-bold text-slate-800 text-base truncate">{item.activity}</h3>
+                            {item.location && <div className="flex items-center gap-1 text-sm text-slate-500 mt-1"><Icons.MapPin/> {item.location}</div>}
+                            {(item.notes || safeAtt(item).length>0) && <div className="mt-2 bg-slate-50 p-2 rounded text-sm text-slate-600">{item.notes}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(item), index:i})}}/>)}</div>}</div>}
                          </div>
                          <div className="flex flex-col gap-2 border-l pl-2"><button onClick={(e)=>{e.stopPropagation(); handleItemAction('itinerary', 'update', {completed:!item.completed}, item.id)}} className={`mt-1 ${item.completed?'text-green-500':'text-slate-300'}`}><Icons.Check/></button><button onClick={(e)=>{e.stopPropagation(); setEditingItem(item)}} className="text-slate-300"><Icons.Settings/></button></div>
                        </div>
@@ -631,7 +630,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
                  <SwipeableRow key={m.id} onDeleteRequest={()=>setDeleteModal({isOpen:true, id:m.id, type:'memories'})} onEdit={()=>setEditingItem(m)}>
                     <div className="p-3 relative">
                       <div className="absolute top-2 right-2 text-slate-300"><Icons.Settings/></div>
-                      {safeAtt(m).length>0 && <div className="flex gap-1 mb-2">{safeAtt(m).map((a,i)=><img key={i} src={a} className="h-20 w-full object-cover rounded bg-slate-100" onClick={e=>{e.stopPropagation();setGallery({images:safeAtt(m), index:i})}}/>)}</div>}
+                      {safeAtt(m).length>0 && <div className="flex gap-1 mb-2">{safeAtt(m).map((a,i)=><img key={i} src={a} className="h-20 w-full object-cover rounded bg-slate-100 cursor-pointer hover:opacity-80" onClick={e=>{e.stopPropagation();setGallery({images:safeAtt(m), index:i})}}/>)}</div>}
                       {linked && <div className="text-xs text-sky-600 bg-sky-50 inline-block px-1 rounded mb-1"><Icons.MapPin/> 於 {linked.activity}</div>}
                       <p className="text-sm text-slate-800 whitespace-pre-wrap">{m.text}</p>
                       <div className="mt-2 pt-2 border-t flex justify-between text-xs text-slate-400"><span>{m.time}</span><span title={moodData.l}>{moodData.i}</span></div>
