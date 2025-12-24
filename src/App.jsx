@@ -397,18 +397,26 @@ function AppContent() {
   useEffect(() => {
     document.title = "我的旅程";
     
-    // 設定網頁圖示 (Favicon & Apple Touch Icon) - 天空藍主題
+    // 設定網頁圖示 (Favicon & Apple Touch Icon)
     const setFavicon = () => {
-      const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+      // 移除舊的圖示連結以確保更新
+      const oldLinks = document.querySelectorAll("link[rel*='icon']");
+      oldLinks.forEach(link => link.remove());
+
+      // 飛機圖示：Sky Blue 背景 (#0ea5e9)，白色飛機
+      const svgIcon = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 fill=%22%230ea5e9%22 rx=%224%22/><path fill=%22white%22 d=%22M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z%22/></svg>`;
+
+      // 設定標準 Favicon
+      const link = document.createElement('link');
       link.type = 'image/svg+xml';
       link.rel = 'icon';
-      // 修改：背景改為 Sky Blue (Sky 500: #0ea5e9)，飛機為白色
-      link.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 fill=%22%230ea5e9%22 rx=%224%22/><path fill=%22white%22 d=%22M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z%22/></svg>`;
+      link.href = svgIcon;
       document.head.appendChild(link);
 
-      const appleLink = document.querySelector("link[rel='apple-touch-icon']") || document.createElement('link');
+      // 設定 Apple Touch Icon (iOS 主畫面)
+      const appleLink = document.createElement('link');
       appleLink.rel = 'apple-touch-icon';
-      appleLink.href = link.href;
+      appleLink.href = svgIcon; // iOS 11.3+ 支援 SVG data URI
       document.head.appendChild(appleLink);
     };
     setFavicon();
