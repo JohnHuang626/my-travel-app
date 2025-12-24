@@ -99,11 +99,9 @@ const Service = {
   subscribe: (tripId, type, callback) => {
     if (Service.mode === 'cloud' && Service.db) {
       try {
-        const rootPath = 'travel-mate-data';
-        // 使用 users/{uid} 路徑以確保擁有者權限，解決 Vercel 上 public 路徑無法刪除的問題
-        let path = tripId 
-          ? ['artifacts', rootPath, 'users', Service.user.uid, 'trips', tripId, type] 
-          : ['artifacts', rootPath, 'users', Service.user.uid, 'trips'];
+        const appId = firebaseConfig.projectId;
+        const rootPath = 'travel-mate-data'; 
+        let path = tripId ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] : ['artifacts', rootPath, 'public', 'data', 'trips'];
         
         let q = collection(Service.db, ...path);
         if (!tripId) q = query(q, orderBy('startDate', 'desc'));
@@ -121,10 +119,7 @@ const Service = {
     const rootPath = 'travel-mate-data';
     if (Service.mode === 'cloud' && Service.db) {
       try {
-        let path = tripId 
-          ? ['artifacts', rootPath, 'users', Service.user.uid, 'trips', tripId, type] 
-          : ['artifacts', rootPath, 'users', Service.user.uid, 'trips'];
-        
+        let path = tripId ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] : ['artifacts', rootPath, 'public', 'data', 'trips'];
         const colRef = collection(Service.db, ...path);
         if (action === 'add') await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
         else if (action === 'update') await updateDoc(doc(colRef, id), data);
@@ -133,7 +128,7 @@ const Service = {
       } catch (e) { 
         console.error("Firebase Operation Failed:", e);
         if (e.code === 'permission-denied') {
-          alert("操作失敗：權限不足。\n請檢查您是否擁有此行程的刪除權限。");
+          alert("操作失敗：權限不足 (Permission Denied)\n請檢查 Firebase 規則。");
         }
         return null;
       }
@@ -156,7 +151,7 @@ const Service = {
     const rootPath = 'travel-mate-data';
     if (Service.mode === 'cloud' && Service.db) {
       const batch = writeBatch(Service.db);
-      const pathBase = ['artifacts', rootPath, 'users', Service.user.uid, 'trips', tripId, 'itinerary'];
+      const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, 'itinerary'];
       batch.update(doc(Service.db, ...pathBase, itemA.id), { time: itemB.time });
       batch.update(doc(Service.db, ...pathBase, itemB.id), { time: itemA.time });
       await batch.commit();
@@ -171,7 +166,7 @@ const Service = {
     if (Service.mode === 'cloud' && Service.db) {
       try {
         const batch = writeBatch(Service.db);
-        const pathBase = ['artifacts', rootPath, 'users', Service.user.uid, 'trips', tripId, type];
+        const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type];
         ids.forEach(id => {
           batch.delete(doc(Service.db, ...pathBase, id));
         });
