@@ -16,8 +16,19 @@ const firebaseConfig = {
 };
 
 // ==========================================
-// 1. 純 SVG 圖示系統 (零外部依賴)
+// 1. 風格與圖示系統
 // ==========================================
+
+// 定義不同類型的顏色主題 (Timeline 樣式核心)
+const TYPE_STYLES = {
+  fun:      { dot: 'bg-sky-400',       line: 'bg-sky-200',     text: 'text-sky-600',     bg: 'bg-sky-50',     border: 'border-sky-100' },
+  food:     { dot: 'bg-orange-400',    line: 'bg-orange-200',  text: 'text-orange-600',  bg: 'bg-orange-50',  border: 'border-orange-100' },
+  shopping: { dot: 'bg-pink-400',      line: 'bg-pink-200',    text: 'text-pink-600',    bg: 'bg-pink-50',    border: 'border-pink-100' },
+  transport:{ dot: 'bg-indigo-400',    line: 'bg-indigo-200',  text: 'text-indigo-600',  bg: 'bg-indigo-50',  border: 'border-indigo-100' },
+  stay:     { dot: 'bg-emerald-400',   line: 'bg-emerald-200', text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+  default:  { dot: 'bg-slate-400',     line: 'bg-slate-200',   text: 'text-slate-600',   bg: 'bg-white',      border: 'border-slate-100' }
+};
+
 const SvgIcon = ({ d, size = 20, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     {d}
@@ -25,7 +36,6 @@ const SvgIcon = ({ d, size = 20, className = "" }) => (
 );
 
 const Icons = {
-  // 經典飛機造型 (類似 ✈️ Emoji)
   Plane: (p) => <SvgIcon {...p} fill="currentColor" stroke="none" d={<path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>} />,
   Calendar: (p) => <SvgIcon {...p} d={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>} />,
   Camera: (p) => <SvgIcon {...p} d={<><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>} />,
@@ -41,18 +51,11 @@ const Icons = {
   ChevronRight: (p) => <SvgIcon {...p} d={<polyline points="9 18 15 12 9 6"/>} />,
   ChevronLeft: (p) => <SvgIcon {...p} d={<polyline points="15 18 9 12 15 6"/>} />,
   FileText: (p) => <SvgIcon {...p} d={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>} />,
-  Paperclip: (p) => <SvgIcon {...p} d={<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>} />,
   Map: (p) => <SvgIcon {...p} d={<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></>} />,
   Refresh: (p) => <SvgIcon {...p} d={<><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>} />,
   Cloud: (p) => <SvgIcon {...p} d={<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>} />,
   CloudOff: (p) => <SvgIcon {...p} d={<><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3"/><line x1="1" y1="1" x2="23" y2="23"/></>} />,
-  HardDrive: (p) => <SvgIcon {...p} d={<><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="10" y1="16" x2="10.01" y2="16"/></>} />,
-  AlertTriangle: (p) => <SvgIcon {...p} d={<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>} />,
-  AlertCircle: (p) => <SvgIcon {...p} d={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />,
-  ImageIcon: (p) => <SvgIcon {...p} d={<><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>} />,
-  Save: (p) => <SvgIcon {...p} d={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>} />,
   Copy: (p) => <SvgIcon {...p} d={<><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>} />,
-  Loader: (p) => <SvgIcon {...p} className={`animate-spin ${p.className||''}`} d={<path d="M21 12a9 9 0 1 1-6.219-8.56"/>} />
 };
 
 // ==========================================
@@ -101,7 +104,6 @@ const Service = {
       try {
         const appId = firebaseConfig.projectId;
         const rootPath = 'travel-mate-data'; 
-        // Revert to public path
         let path = tripId 
           ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] 
           : ['artifacts', rootPath, 'public', 'data', 'trips'];
@@ -122,7 +124,6 @@ const Service = {
     const rootPath = 'travel-mate-data';
     if (Service.mode === 'cloud' && Service.db) {
       try {
-        // Revert to public path
         let path = tripId 
           ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] 
           : ['artifacts', rootPath, 'public', 'data', 'trips'];
@@ -155,7 +156,6 @@ const Service = {
     const rootPath = 'travel-mate-data';
     if (Service.mode === 'cloud' && Service.db) {
       const batch = writeBatch(Service.db);
-      // Revert to public path
       const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, 'itinerary'];
       batch.update(doc(Service.db, ...pathBase, itemA.id), { time: itemB.time });
       batch.update(doc(Service.db, ...pathBase, itemB.id), { time: itemA.time });
@@ -171,7 +171,6 @@ const Service = {
     if (Service.mode === 'cloud' && Service.db) {
       try {
         const batch = writeBatch(Service.db);
-        // Revert to public path
         const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type];
         ids.forEach(id => {
           batch.delete(doc(Service.db, ...pathBase, id));
@@ -259,16 +258,17 @@ const ImageViewer = ({ images, initialIndex, onClose }) => {
   );
 };
 
-const SwipeableRow = ({ children, onDeleteRequest, onEdit }) => {
+// Modified SwipeableRow to accept className and remove internal margin
+const SwipeableRow = ({ children, onDeleteRequest, onEdit, className = "" }) => {
   const [offset, setOffset] = useState(0);
   const startX = useRef(0);
   const handleStart = (cx) => { startX.current = cx; };
   const handleMove = (cx) => { const diff = cx - startX.current; if (diff < 0) setOffset(Math.max(diff, -80)); };
   const handleEnd = () => setOffset(offset < -40 ? -80 : 0);
   return (
-    <div className="relative w-full rounded-xl mb-4 h-auto select-none overflow-hidden group touch-pan-y">
+    <div className={`relative w-full rounded-xl h-auto select-none overflow-visible group touch-pan-y ${className}`}>
       <div className="absolute inset-0 bg-red-500 rounded-xl flex justify-end items-center z-0"><button onClick={(e) => { e.stopPropagation(); onDeleteRequest(() => setOffset(0)); }} className="w-20 h-full flex flex-col items-center justify-center text-white active:bg-red-600 transition-colors"><Icons.Trash size={20} /><span className="text-[10px] font-bold mt-1">刪除</span></button></div>
-      <div className="relative z-10 bg-white rounded-xl shadow-sm border border-slate-100 transition-transform duration-200 ease-out" style={{ transform: `translateX(${offset}px)` }} onTouchStart={e => handleStart(e.touches[0].clientX)} onTouchMove={e => handleMove(e.touches[0].clientX)} onTouchEnd={handleEnd} onMouseDown={e => handleStart(e.clientX)} onMouseMove={e => handleMove(e.clientX)} onMouseUp={handleEnd} onMouseLeave={handleEnd} onClick={() => { if (offset < 0) setOffset(0); else onEdit(); }}>{children}</div>
+      <div className="relative z-10 bg-white rounded-xl shadow-sm border border-slate-100 transition-transform duration-200 ease-out h-full" style={{ transform: `translateX(${offset}px)` }} onTouchStart={e => handleStart(e.touches[0].clientX)} onTouchMove={e => handleMove(e.touches[0].clientX)} onTouchEnd={handleEnd} onMouseDown={e => handleStart(e.clientX)} onMouseMove={e => handleMove(e.clientX)} onMouseUp={handleEnd} onMouseLeave={handleEnd} onClick={() => { if (offset < 0) setOffset(0); else onEdit(); }}>{children}</div>
     </div>
   );
 };
@@ -358,7 +358,7 @@ const resizeImage = (file) => new Promise(resolve => {
 const calculateDays = (s, e) => { 
   try { 
     if(!s || !e) return 1;
-    const d1 = new Date(s.replace(/-/g, '/')); // 相容 iOS
+    const d1 = new Date(s.replace(/-/g, '/')); 
     const d2 = new Date(e.replace(/-/g, '/'));
     if(isNaN(d1) || isNaN(d2)) return 1;
     return Math.max(1, Math.ceil(Math.abs(d2 - d1) / 86400000) + 1); 
@@ -368,7 +368,7 @@ const calculateDays = (s, e) => {
 const getDisplayDate = (start, dayIdx) => {
   if (!start) return `Day ${dayIdx}`;
   try {
-    const d = new Date(start.replace(/-/g, '/')); // 相容 iOS
+    const d = new Date(start.replace(/-/g, '/')); 
     if (isNaN(d.getTime())) return `Day ${dayIdx}`;
     d.setDate(d.getDate() + (dayIdx - 1));
     return d.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric', weekday: 'short' });
@@ -384,7 +384,7 @@ const MOODS = [
 const TYPE_ICONS = { fun:'🎡', food:'🍜', shopping:'🛍️', transport:'🚆', stay:'🏨' };
 
 // ==========================================
-// 5. 核心頁面元件 (移至上方以避免 ReferenceError)
+// 5. 核心頁面元件
 // ==========================================
 
 // === Trip List ===
@@ -476,7 +476,6 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
   const handleItemAction = async (type, action, data, id) => {
     const res = await Service.op(trip.id, type, action, data, id);
     if (Service.mode === 'local' && res) type === 'itinerary' ? setItems(res) : setMemories(res);
-    // FIX: 刪除操作後也必須關閉 Modal 和清除選取狀態
     setEditOpen(false); 
     setEditingItem(null); 
   };
@@ -529,7 +528,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
   const dailyMemories = memories.filter(m => m.day === day);
   
   const safeAtt = (i) => Array.isArray(i?.attachments) ? i.attachments : [];
-  const typeIcon = (t) => { if(t==='shopping') return '🛍️'; if(t==='food') return '🍜'; if(t==='transport') return '🚆'; if(t==='stay') return '🏨'; return '🎡'; };
+  const typeIcon = (t) => TYPE_ICONS[t] || '📍';
 
   return (
     <>
@@ -592,32 +591,73 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
 
       <main className="pb-24 px-4 pt-4">
         {activeTab === 'plan' ? (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center"><h2 className="text-lg font-bold text-slate-700 flex items-center gap-2"><Icons.Calendar/> <span>Day {day}</span><span className="text-xs bg-slate-100 px-2 rounded-full text-slate-500">{getDisplayD()}</span></h2>
+          <div className="space-y-1"> {/* 減少垂直間距，由 Flex 佈局控制 */}
+            <div className="flex justify-between items-center mb-4"><h2 className="text-lg font-bold text-slate-700 flex items-center gap-2"><Icons.Calendar/> <span>Day {day}</span><span className="text-xs bg-slate-100 px-2 rounded-full text-slate-500">{getDisplayD()}</span></h2>
             <div className="flex gap-2">
               {dailyItems.length > 0 && <button onClick={()=>setDeleteModal({isOpen:true, type:'batch_day'})} className="text-red-500 bg-white border border-red-100 p-2 rounded-full shadow-sm"><Icons.Trash/></button>}
               <button onClick={()=>setImportOpen(true)} className="text-sky-600 bg-white border border-sky-100 p-2 rounded-full"><Icons.FileText/></button>
               <button onClick={()=>{setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[]}); setEditOpen(true)}} className="text-white bg-sky-600 p-2 rounded-full shadow-md"><Icons.Plus/></button>
             </div>
             </div>
-            <div className="space-y-3 relative pl-4 border-l-2 border-slate-200 ml-2">
-               {dailyItems.map((item, idx) => (
-                  <SwipeableRow key={item.id} onDeleteRequest={()=>setDeleteModal({isOpen:true, id:item.id, type:'itinerary'})} onEdit={()=>setEditingItem(item)}>
-                     <div className={`p-3 relative ${item.completed ? 'opacity-60' : ''}`}>
-                       <div className={`absolute -left-[30px] top-3 w-4 h-4 rounded-full border-2 border-white shadow-sm z-20 ${item.completed ? 'bg-slate-400' : 'bg-sky-500'}`}></div>
-                       <div className="flex justify-between items-start">
-                         <div className="flex flex-col gap-1 mr-2 mt-1"><button onClick={(e)=>{e.stopPropagation(); handleMove(idx, -1)}} className="p-1 bg-slate-50 rounded text-slate-400"><Icons.ArrowUp/></button><button onClick={(e)=>{e.stopPropagation(); handleMove(idx, 1)}} className="p-1 bg-slate-50 rounded text-slate-400"><Icons.ArrowDown/></button></div>
-                         <div className="flex-1 min-w-0 pr-2">
-                            <div className="flex items-center gap-2 mb-1"><span className="font-mono text-xs font-bold text-sky-600 bg-sky-50 px-1 rounded">{item.time}</span><span className="text-lg">{typeIcon(item.type)}</span></div>
-                            <h3 className="font-bold text-slate-800 text-base truncate">{item.activity}</h3>
-                            {item.location && <div className="flex items-center gap-1 text-sm text-slate-500 mt-1"><Icons.MapPin/> {item.location}</div>}
-                            {(item.notes || safeAtt(item).length>0) && <div className="mt-2 bg-slate-50 p-2 rounded text-sm text-slate-600">{item.notes}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(item), index:i})}}/>)}</div>}</div>}
-                         </div>
-                         <div className="flex flex-col gap-2 border-l pl-2"><button onClick={(e)=>{e.stopPropagation(); handleItemAction('itinerary', 'update', {completed:!item.completed}, item.id)}} className={`mt-1 ${item.completed?'text-green-500':'text-slate-300'}`}><Icons.Check/></button><button onClick={(e)=>{e.stopPropagation(); setEditingItem(item)}} className="text-slate-300"><Icons.Settings/></button></div>
-                       </div>
-                     </div>
-                  </SwipeableRow>
-               ))}
+            
+            {/* Timeline View Container */}
+            <div className="relative">
+               {dailyItems.length === 0 && <div className="text-center text-slate-300 py-10 text-sm">點擊 + 新增第一個行程</div>}
+               {dailyItems.map((item, idx) => {
+                  const style = TYPE_STYLES[item.type] || TYPE_STYLES.default;
+                  const isLast = idx === dailyItems.length - 1;
+
+                  return (
+                    <div key={item.id} className="flex relative">
+                      {/* Left: Time */}
+                      <div className="w-14 flex-shrink-0 flex flex-col items-end pr-3 pt-5 relative">
+                        <span className={`text-xs font-bold font-mono ${style.text}`}>{item.time}</span>
+                      </div>
+
+                      {/* Middle: Line & Dot */}
+                      <div className="relative flex flex-col items-center w-6 flex-shrink-0">
+                        {/* Vertical Line */}
+                        <div className={`w-0.5 flex-1 ${style.line} ${isLast ? 'bg-gradient-to-b from-current to-transparent max-h-full' : ''}`} style={{ minHeight: '60px' }}></div>
+                        {/* Dot */}
+                        <div className={`absolute top-5 w-3 h-3 rounded-full border-2 border-white shadow-sm z-10 ${style.dot}`}></div>
+                      </div>
+
+                      {/* Right: Content Card (Swipeable) */}
+                      <div className="flex-1 pb-4 pl-2 min-w-0">
+                        <SwipeableRow 
+                          className="" 
+                          onDeleteRequest={()=>setDeleteModal({isOpen:true, id:item.id, type:'itinerary'})} 
+                          onEdit={()=>setEditingItem(item)}
+                        >
+                           <div className={`p-3 rounded-xl border relative shadow-sm transition-all active:scale-[0.98] ${style.bg} ${style.border} ${item.completed ? 'opacity-60 grayscale' : ''}`}>
+                             <div className="flex justify-between items-start">
+                               <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <h3 className={`font-bold text-base truncate ${item.completed ? 'line-through text-slate-500' : 'text-slate-800'}`}>{item.activity}</h3>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs opacity-70 mb-1">
+                                     <span className="flex items-center gap-0.5">{typeIcon(item.type)} {item.type.toUpperCase()}</span>
+                                     {item.location && <span className="flex items-center gap-0.5 truncate"><Icons.MapPin size={10}/> {item.location}</span>}
+                                  </div>
+                                  
+                                  {(item.notes || safeAtt(item).length>0) && <div className="mt-2 bg-white/60 p-2 rounded text-sm text-slate-600 border border-black/5">{item.notes}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(item), index:i})}}/>)}</div>}</div>}
+                               </div>
+                               
+                               {/* Controls */}
+                               <div className="flex flex-col gap-3 ml-2">
+                                 <button onClick={(e)=>{e.stopPropagation(); handleItemAction('itinerary', 'update', {completed:!item.completed}, item.id)}} className={`${item.completed?'text-emerald-500':'text-slate-300'} hover:text-emerald-500`}><Icons.Check size={18}/></button>
+                                 <div className="flex flex-col gap-1">
+                                   <button onClick={(e)=>{e.stopPropagation(); handleMove(idx, -1)}} className="text-slate-300 hover:text-sky-500"><Icons.ArrowUp size={14}/></button>
+                                   <button onClick={(e)=>{e.stopPropagation(); handleMove(idx, 1)}} className="text-slate-300 hover:text-sky-500"><Icons.ArrowDown size={14}/></button>
+                                 </div>
+                               </div>
+                             </div>
+                           </div>
+                        </SwipeableRow>
+                      </div>
+                    </div>
+                  );
+               })}
             </div>
           </div>
         ) : (
@@ -627,8 +667,8 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
                const linked = dailyItems.find(i=>i.id===m.linkedId);
                const moodData = MOODS.find(x=>x.k===m.mood) || MOODS[0];
                return (
-                 <SwipeableRow key={m.id} onDeleteRequest={()=>setDeleteModal({isOpen:true, id:m.id, type:'memories'})} onEdit={()=>setEditingItem(m)}>
-                    <div className="p-3 relative">
+                 <SwipeableRow key={m.id} onDeleteRequest={()=>setDeleteModal({isOpen:true, id:m.id, type:'memories'})} onEdit={()=>setEditingItem(m)} className="mb-4">
+                    <div className="p-3 relative bg-white border border-slate-100 shadow-sm rounded-xl">
                       <div className="absolute top-2 right-2 text-slate-300"><Icons.Settings/></div>
                       {safeAtt(m).length>0 && <div className="flex gap-1 mb-2">{safeAtt(m).map((a,i)=><img key={i} src={a} className="h-20 w-full object-cover rounded bg-slate-100 cursor-pointer hover:opacity-80" onClick={e=>{e.stopPropagation();setGallery({images:safeAtt(m), index:i})}}/>)}</div>}
                       {linked && <div className="text-xs text-sky-600 bg-sky-50 inline-block px-1 rounded mb-1"><Icons.MapPin/> 於 {linked.activity}</div>}
