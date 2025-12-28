@@ -383,6 +383,17 @@ const MOODS = [
 
 const TYPE_ICONS = { fun:'🎡', food:'🍜', shopping:'🛍️', transport:'🚆', stay:'🏨' };
 
+// 新增：文字渲染小工具，處理超連結和換行
+const renderTextWithLinks = (text) => {
+  if (!text) return null;
+  return text.split(/(https?:\/\/[^\s]+)/g).map((part, i) => {
+    if (part.match(/^https?:\/\//)) {
+      return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-sky-600 underline break-all hover:text-sky-800" onClick={e => e.stopPropagation()}>{part}</a>;
+    }
+    return part;
+  });
+};
+
 // ==========================================
 // 5. 核心頁面元件
 // ==========================================
@@ -561,7 +572,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
                </div>
                <input className="w-full border p-2 rounded" placeholder="名稱" value={editingItem?editingItem.activity:newItem.activity} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, activity:v}):setNewItem({...newItem, activity:v})}} />
                <LocationInput placeholder="地點" value={editingItem?editingItem.location:newItem.location} onChange={v=>editingItem?setEditingItem({...editingItem, location:v}):setNewItem({...newItem, location:v})} />
-               <textarea className="w-full border p-2 rounded h-20" placeholder="備註" value={editingItem?editingItem.notes:newItem.notes} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, notes:v}):setNewItem({...newItem, notes:v})}} />
+               <textarea className="w-full border p-2 rounded h-20" placeholder="備註 (支援網址與換行)" value={editingItem?editingItem.notes:newItem.notes} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, notes:v}):setNewItem({...newItem, notes:v})}} />
              </>
            ) : (
              <>
@@ -640,7 +651,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
                                      {item.location && <span className="flex items-center gap-0.5 truncate"><Icons.MapPin size={10}/> {item.location}</span>}
                                   </div>
                                   
-                                  {(item.notes || safeAtt(item).length>0) && <div className="mt-2 bg-white/60 p-2 rounded text-sm text-slate-600 border border-black/5">{item.notes}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(item), index:i})}}/>)}</div>}</div>}
+                                  {(item.notes || safeAtt(item).length>0) && <div className="mt-2 bg-white/60 p-2 rounded text-sm text-slate-600 border border-black/5 whitespace-pre-wrap">{renderTextWithLinks(item.notes)}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(item), index:i})}}/>)}</div>}</div>}
                                </div>
                                
                                {/* Controls */}
