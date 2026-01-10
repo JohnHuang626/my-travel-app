@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, signOut } from 'firebase/auth';
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, writeBatch } from 'firebase/firestore';
 
 // ==========================================
@@ -19,7 +19,6 @@ const firebaseConfig = {
 // 1. 風格與圖示系統
 // ==========================================
 
-// 定義不同類型的顏色主題 (Timeline 樣式核心)
 const TYPE_STYLES = {
   fun:      { dot: 'bg-sky-400',       line: 'bg-sky-200',     text: 'text-sky-600',     bg: 'bg-sky-50',     border: 'border-sky-100' },
   food:     { dot: 'bg-orange-400',    line: 'bg-orange-200',  text: 'text-orange-600',  bg: 'bg-orange-50',  border: 'border-orange-100' },
@@ -56,10 +55,12 @@ const Icons = {
   Cloud: (p) => <SvgIcon {...p} d={<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>} />,
   CloudOff: (p) => <SvgIcon {...p} d={<><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3"/><line x1="1" y1="1" x2="23" y2="23"/></>} />,
   Copy: (p) => <SvgIcon {...p} d={<><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>} />,
+  Loader: (p) => <SvgIcon {...p} className={`animate-spin ${p.className||''}`} d={<path d="M21 12a9 9 0 1 1-6.219-8.56"/>} />,
+  LogOut: (p) => <SvgIcon {...p} d={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>} />
 };
 
 // ==========================================
-// 2. Firebase Imports & Service
+// 2. Firebase Imports & Service (修改後：混合存取)
 // ==========================================
 
 const SafeStorage = {
@@ -83,7 +84,10 @@ const Service = {
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
         await signInWithCustomToken(Service.auth, __initial_auth_token);
       } else {
-        await signInAnonymously(Service.auth);
+        // 如果沒有 token，且沒有當前用戶，才匿名登入
+        if (!Service.auth.currentUser) {
+           await signInAnonymously(Service.auth);
+        }
       }
       
       return new Promise(resolve => {
@@ -93,16 +97,20 @@ const Service = {
         });
       });
     } catch (e) { 
-      console.warn("Firebase Init Failed:", e); 
+      console.warn("Firebase Init Failed (Offline?):", e); 
+      // 離線時，如果有快取或本地資料，嘗試進入 local 模式
       Service.user = { uid: 'guest' };
       Service.mode = 'local';
       return 'local';
     }
   },
+  // 核心修改：備份邏輯
   subscribe: (tripId, type, callback) => {
+    // 定義備份用的 key，加上 backup 前綴以區分純本地模式資料
+    const backupKey = tripId ? `tm_backup_${type}_${tripId}` : 'tm_backup_trips';
+    
     if (Service.mode === 'cloud' && Service.db) {
       try {
-        const appId = firebaseConfig.projectId;
         const rootPath = 'travel-mate-data'; 
         let path = tripId 
           ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] 
@@ -112,9 +120,28 @@ const Service = {
         if (!tripId) q = query(q, orderBy('startDate', 'desc'));
         else if (type === 'itinerary') q = query(q, orderBy('time', 'asc'));
         else q = query(q, orderBy('createdAt', 'desc'));
-        return onSnapshot(q, (snap) => callback(snap.docs.map(d => ({ ...d.data(), id: d.id }))), () => callback([]));
-      } catch { return () => {}; }
+        
+        // 監聽 Firebase
+        return onSnapshot(q, (snap) => {
+           // 1. 成功取得雲端資料
+           const data = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+           callback(data);
+           // 2. 自動備份到 LocalStorage (含照片 Base64)
+           SafeStorage.set(backupKey, data);
+        }, (err) => {
+           // 3. 連線失敗 (離線) 時的處理
+           console.warn("Firestore offline/error, loading backup:", err);
+           const backup = SafeStorage.get(backupKey, []);
+           callback(backup);
+        });
+      } catch { 
+        // 初始化查詢失敗，讀取備份
+        const backup = SafeStorage.get(backupKey, []);
+        callback(backup);
+        return () => {}; 
+      }
     } else {
+      // 純本地模式 (Guest)
       const key = tripId ? `tm_v25_${type}_${tripId}` : 'tm_v25_trips';
       callback(SafeStorage.get(key, []));
       return () => {};
@@ -132,12 +159,14 @@ const Service = {
         if (action === 'add') await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
         else if (action === 'update') await updateDoc(doc(colRef, id), data);
         else if (action === 'delete') await deleteDoc(doc(colRef, id));
+        // 注意：寫入操作成功後，snapshot listener 會觸發，進而更新備份
         return null;
       } catch (e) { 
         console.error("Firebase Operation Failed:", e);
         return null;
       }
     }
+    // 本地模式寫入
     const key = tripId ? `tm_v25_${type}_${tripId}` : 'tm_v25_trips';
     let list = SafeStorage.get(key, []);
     if (action === 'add') {
@@ -184,6 +213,19 @@ const Service = {
       list = list.filter(i => !ids.includes(i.id));
       SafeStorage.set(key, list);
       return list;
+    }
+  },
+  // 新增：登出功能
+  logout: async () => {
+    try {
+      if (Service.auth) await signOut(Service.auth);
+      // 清除本地所有資料 (LocalStorage)
+      SafeStorage.clear();
+      // 重新整理頁面
+      window.location.reload();
+    } catch (e) {
+      console.error("Logout failed", e);
+      window.location.reload();
     }
   }
 };
@@ -258,7 +300,6 @@ const ImageViewer = ({ images, initialIndex, onClose }) => {
   );
 };
 
-// Modified SwipeableRow to accept className and remove internal margin
 const SwipeableRow = ({ children, onDeleteRequest, onEdit, className = "" }) => {
   const [offset, setOffset] = useState(0);
   const startX = useRef(0);
@@ -292,7 +333,7 @@ const ImportModal = ({ isOpen, onClose, onImport }) => {
   );
 };
 
-const TripSettingsModal = ({ isOpen, trip, onClose, onSave, handleImg }) => {
+const TripSettingsModal = ({ isOpen, trip, onClose, onSave, handleImg, isProcessing }) => {
   const [data, setData] = useState({ name: '', startDate: '', endDate: '' });
   const fileRef = useRef(null);
   useEffect(() => { if (trip) setData({ name: trip.name, startDate: trip.startDate, endDate: trip.endDate, coverImage: trip.coverImage }); }, [trip, isOpen]);
@@ -303,9 +344,10 @@ const TripSettingsModal = ({ isOpen, trip, onClose, onSave, handleImg }) => {
       <div className="bg-white rounded-xl w-full max-w-sm p-5 flex flex-col">
         <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold flex items-center gap-2"><Icons.Settings className="text-sky-600" size={20}/> 旅行設定</h3><button onClick={onClose}><Icons.X className="text-slate-400"/></button></div>
         <div className="space-y-4 mb-6">
-          <div className="border p-2 rounded bg-slate-50 text-center cursor-pointer" onClick={()=>fileRef.current.click()}>
+          <div className="border p-2 rounded bg-slate-50 text-center cursor-pointer relative" onClick={()=>fileRef.current.click()}>
              {data.coverImage ? <img src={data.coverImage} className="h-32 w-full object-cover rounded"/> : <div className="h-20 flex flex-col justify-center items-center text-slate-400"><Icons.Camera size={24}/><span className="text-xs">封面</span></div>}
-             <input type="file" hidden ref={fileRef} onChange={async e=>{const b64=await resizeImage(e.target.files[0]); if(b64) setData({...data, coverImage: b64})}}/>
+             {isProcessing && <div className="absolute inset-0 bg-white/80 flex items-center justify-center"><Icons.Loader className="text-sky-600" size={30}/></div>}
+             <input type="file" hidden ref={fileRef} onChange={async e=>{handleImg(e, [], n=>{if(n[0]) setData({...data, coverImage: n[0]})})}}/>
           </div>
           <div><label className="block text-xs text-slate-500 mb-1">名稱</label><input className="w-full border p-2 rounded-lg text-sm" value={data.name} onChange={e => setData({...data, name: e.target.value})}/></div>
           <div className="grid grid-cols-2 gap-3">
@@ -383,7 +425,6 @@ const MOODS = [
 
 const TYPE_ICONS = { fun:'🎡', food:'🍜', shopping:'🛍️', transport:'🚆', stay:'🏨' };
 
-// 新增：文字渲染小工具，處理超連結和換行
 const renderTextWithLinks = (text) => {
   if (!text) return null;
   return text.split(/(https?:\/\/[^\s]+)/g).map((part, i) => {
@@ -403,6 +444,7 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
   const [isCreating, setIsCreating] = useState(false);
   const [newTrip, setNewTrip] = useState({ name: '', startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] });
   const [deleteModal, setDeleteModal] = useState(false);
+  const [logoutModal, setLogoutModal] = useState(false);
 
   const handleCreate = () => {
     if(!newTrip.name) return;
@@ -413,9 +455,30 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
   return (
     <div className="pb-20">
       <ConfirmModal isOpen={!!deleteModal} title="刪除" message="確定刪除？" onConfirm={() => { onDelete(deleteModal); setDeleteModal(null); }} onCancel={() => setDeleteModal(null)} />
-      <header className={`text-white p-6 pt-10 shadow-md rounded-b-3xl mb-6 ${mode==='cloud'?'bg-sky-600':'bg-slate-600'}`}>
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Icons.Plane /> 我的旅程</h1>
-        <div className="text-[10px] opacity-80 mt-1 flex items-center gap-1">{mode==='cloud'?<><Icons.Cloud size={10}/> 家庭共享模式</>:<><Icons.CloudOff size={10}/> 本機試用模式</>}</div>
+      {/* 登出確認 Modal */}
+      <ConfirmModal 
+        isOpen={logoutModal} 
+        title="登出並清除資料" 
+        message="確定要登出嗎？此動作將會清除這台裝置上的所有暫存資料與照片。" 
+        onConfirm={() => Service.logout()} 
+        onCancel={() => setLogoutModal(false)} 
+      />
+
+      <header className={`text-white p-6 pt-10 shadow-md rounded-b-3xl mb-6 flex justify-between items-start ${mode==='cloud'?'bg-sky-600':'bg-slate-600'}`}>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2"><Icons.Plane /> 我的旅程</h1>
+          <div className="text-[10px] opacity-80 mt-1 flex items-center gap-1">
+            {mode==='cloud' ? <><Icons.Cloud size={10}/> 雲端備份中</> : <><Icons.CloudOff size={10}/> 離線模式</>}
+          </div>
+        </div>
+        {/* 新增：登出按鈕 */}
+        <button 
+          onClick={() => setLogoutModal(true)}
+          className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
+          title="登出並清除資料"
+        >
+          <Icons.LogOut size={20} />
+        </button>
       </header>
 
       <div className="px-4 space-y-4">
@@ -471,10 +534,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
   const [settingsData, setSettingsData] = useState({ name: trip.name, startDate: trip.startDate, endDate: trip.endDate, coverImage: trip.coverImage });
 
   const fileRef = useRef(null);
-  const coverRef = useRef(null);
-  const memFileRef = useRef(null);
-  const editFileRef = useRef(null);
-
+  
   const [items, setItems] = useState([]);
   const [memories, setMemories] = useState([]);
 
@@ -558,7 +618,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
         onCancel={() => setDeleteModal({ isOpen: false })} 
       />
       <ImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
-      <TripSettingsModal isOpen={settingsOpen} trip={trip} onClose={() => setSettingsOpen(false)} onSave={onUpdate} handleImg={handleImg} />
+      <TripSettingsModal isOpen={settingsOpen} trip={trip} onClose={() => setSettingsOpen(false)} onSave={onUpdate} handleImg={handleImg} isProcessing={isProcessing} />
       {gallery && <ImageViewer images={gallery.images} initialIndex={gallery.index} onClose={() => setGallery(null)} />}
 
       {/* Edit/Add Modal */}
@@ -581,13 +641,16 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
                <textarea className="w-full border p-2 rounded h-32" placeholder="回憶..." value={editingItem?editingItem.text:newMem.text} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, text:v}):setNewMem({...newMem, text:v})}} />
              </>
            )}
-           <div className="flex justify-between items-center border p-2 rounded"><span className="text-xs">圖片</span><button onClick={()=>fileRef.current.click()} className="text-sky-600 font-bold"><Icons.Plus/></button><input type="file" multiple hidden ref={fileRef} onChange={e=>handleImg(e, editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments), n=>{editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))})} /></div>
+           <div className="flex justify-between items-center border p-2 rounded"><span className="text-xs">圖片</span><button onClick={()=>fileRef.current.click()} className="text-sky-600 font-bold" disabled={isProcessing}><Icons.Plus/></button><input type="file" multiple hidden ref={fileRef} onChange={e=>handleImg(e, editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments), n=>{editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))})} /></div>
+           
+           {isProcessing && <div className="text-xs text-sky-600 flex items-center gap-1"><Icons.Loader size={12}/> 正在處理圖片...</div>}
+           
            <div className="grid grid-cols-4 gap-2">{(editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments)).map((a,i)=><div key={i} className="relative h-16 bg-slate-100"><img src={a} className="w-full h-full object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(editingItem?editingItem:(activeTab==='plan'?newItem:newMem)), index:i})}}/>
              <button onClick={()=>{const curr=editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments); const n=[...curr]; n.splice(i,1); editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))}} className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-0.5"><Icons.X size={10}/></button></div>)}</div>
            <div className="flex gap-2">
              {/* Delete Button inside Edit Modal */}
              {editingItem && <button onClick={()=>setDeleteModal({isOpen:true, id:editingItem.id, type:isItineraryEdit?'itinerary':'memories'})} className="flex-1 bg-red-100 text-red-600 py-2 rounded">刪除</button>}
-             <button onClick={()=>{ if(editingItem) handleItemAction(editingItem.activity?'itinerary':'memories', 'update', editingItem, editingItem.id); else { if(activeTab==='plan') handleItemAction('itinerary', 'add', {day, ...newItem, completed:false}); else { const n={...newMem, day, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}; handleItemAction('memories', 'add', n); setEditOpen(false); setNewMem({text:'',mood:'happy',attachments:[], linkedId: ''}); } } }} className="flex-1 bg-sky-600 text-white py-2 rounded font-bold">儲存</button>
+             <button onClick={()=>{ if(editingItem) handleItemAction(editingItem.activity?'itinerary':'memories', 'update', editingItem, editingItem.id); else { if(activeTab==='plan') handleItemAction('itinerary', 'add', {day, ...newItem, completed:false}); else { const n={...newMem, day, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}; handleItemAction('memories', 'add', n); setEditOpen(false); setNewMem({text:'',mood:'happy',attachments:[], linkedId: ''}); } } }} className="flex-1 bg-sky-600 text-white py-2 rounded font-bold" disabled={isProcessing}>{isProcessing ? '處理中...' : '儲存'}</button>
            </div>
         </div>
       </Modal>
