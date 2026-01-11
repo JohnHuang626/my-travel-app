@@ -16,7 +16,7 @@ const firebaseConfig = {
 };
 
 // ==========================================
-// 1. 風格與圖示系統 (修復 SvgIcon 結構)
+// 1. 風格與圖示系統
 // ==========================================
 
 const TYPE_STYLES = {
@@ -28,7 +28,6 @@ const TYPE_STYLES = {
   default:  { dot: 'bg-slate-400',     line: 'bg-slate-200',   text: 'text-slate-600',   bg: 'bg-white',      border: 'border-slate-100' }
 };
 
-// FIX: 改用 children 傳遞 SVG 內容，避免 Object as Child 錯誤
 const SvgIcon = ({ children, size = 20, className = "", ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
     {children}
@@ -62,30 +61,39 @@ const Icons = {
 };
 
 // ==========================================
-// 2. Local Database (IndexedDB)
+// 2. Local Database (IndexedDB) - 核心修改：穩定連線版
 // ==========================================
 
 const LocalDB = {
   dbName: 'TravelMateDB',
   version: 1,
-  
-  init: () => new Promise((resolve, reject) => {
-    if (!window.indexedDB) {
-      resolve(null); // Fallback if IndexedDB not supported
-      return;
-    }
-    const req = indexedDB.open(LocalDB.dbName, LocalDB.version);
+  dbPromise: null, // Cache the promise
+
+  init: () => {
+    if (!window.indexedDB) return Promise.resolve(null);
     
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('backup')) {
-        db.createObjectStore('backup');
-      }
-    };
-    
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  }),
+    // 如果已經有連線 Promise，直接回傳
+    if (LocalDB.dbPromise) return LocalDB.dbPromise;
+
+    LocalDB.dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(LocalDB.dbName, LocalDB.version);
+      
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('backup')) {
+          db.createObjectStore('backup');
+        }
+      };
+      
+      req.onsuccess = () => resolve(req.result);
+      
+      req.onerror = () => {
+        LocalDB.dbPromise = null; // 重置以便下次重試
+        reject(req.error);
+      };
+    });
+    return LocalDB.dbPromise;
+  },
 
   set: async (key, value) => {
     try {
@@ -188,12 +196,16 @@ const Service = {
   
   subscribe: (tripId, type, callback) => {
     const backupKey = tripId ? `tm_v3_${type}_${tripId}` : 'tm_v3_trips';
+    let isActive = true; // 防止組件卸載後呼叫 callback
 
+    // 1. 立即讀取 IndexedDB (非同步)
     LocalDB.get(backupKey).then(data => {
-      if (data && data.length > 0) callback(data);
-      else callback([]); 
+      if (isActive && data && data.length > 0) callback(data);
+      else if (isActive) callback([]); 
     });
 
+    // 2. 如果連線正常，監聽雲端並更新 IndexedDB
+    let unsubscribe = () => {};
     if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
       try {
         const rootPath = 'travel-mate-data'; 
@@ -206,7 +218,8 @@ const Service = {
         else if (type === 'itinerary') q = query(q, orderBy('time', 'asc'));
         else q = query(q, orderBy('createdAt', 'desc'));
         
-        return onSnapshot(q, (snap) => {
+        unsubscribe = onSnapshot(q, (snap) => {
+           if (!isActive) return;
            const data = snap.docs.map(d => ({ ...d.data(), id: d.id }));
            callback(data);
            LocalDB.set(backupKey, data);
@@ -214,11 +227,14 @@ const Service = {
            console.warn("Firestore offline, viewing local data.");
         });
       } catch (e) { 
-        return () => {}; 
+        console.error("Subscribe Error", e);
       }
-    } else {
-      return () => {};
     }
+
+    return () => {
+      isActive = false; // 標記為失效
+      unsubscribe();
+    };
   },
 
   op: async (tripId, type, action, data, id) => {
