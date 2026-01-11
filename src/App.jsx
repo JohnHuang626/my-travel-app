@@ -76,6 +76,14 @@ const SafeStorage = {
 const Service = {
   db: null, auth: null, user: null, mode: 'loading',
   init: async () => {
+    // 1. 偵測網路狀態，如果沒網路直接進入本地模式 (秒開)
+    if (!navigator.onLine) {
+      console.log("Offline detected, starting in local mode.");
+      Service.user = { uid: 'guest' };
+      Service.mode = 'local';
+      return 'local';
+    }
+
     try {
       const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
       Service.auth = getAuth(app);
@@ -85,19 +93,22 @@ const Service = {
         await signInWithCustomToken(Service.auth, __initial_auth_token);
       } else {
         if (!Service.auth.currentUser) {
-           // 這裡可能會因為斷網失敗，這是預期內的
-           try { await signInAnonymously(Service.auth); } catch(e){}
+           try { await signInAnonymously(Service.auth); } catch(e){
+             console.warn("Auth failed, likely offline");
+             Service.user = { uid: 'guest' };
+             Service.mode = 'local';
+             return 'local';
+           }
         }
       }
       
       return new Promise(resolve => {
-        // 增加一個 timeout，避免 onAuthStateChanged 在斷網時卡太久
+        // 將 timeout 縮短為 2 秒，避免等待過久
         const timeout = setTimeout(() => {
-             // 5秒沒反應就當作是本地模式，但也許有備份
              Service.user = { uid: 'guest' }; 
              Service.mode = 'local'; 
              resolve('local');
-        }, 5000);
+        }, 2000);
 
         onAuthStateChanged(Service.auth, (u) => {
           clearTimeout(timeout);
@@ -119,21 +130,19 @@ const Service = {
     const guestKey = tripId ? `tm_v25_${type}_${tripId}` : 'tm_v25_trips';
 
     // 1. 無論任何模式，先嘗試讀取本地備份，有資料就先顯示
-    // 這樣在離線時能秒開
     const localBackup = SafeStorage.get(backupKey, []);
     const localGuest = SafeStorage.get(guestKey, []);
     
-    // 優先顯示備份資料 (通常比較新)，如果沒有才顯示訪客資料
     if (localBackup.length > 0) {
       callback(localBackup);
     } else if (localGuest.length > 0) {
       callback(localGuest);
     } else {
-      callback([]); // 暫時給空陣列，等待雲端下載
+      callback([]); 
     }
 
     // 2. 如果是雲端模式且資料庫可用，嘗試連線更新
-    if (Service.mode === 'cloud' && Service.db) {
+    if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
       try {
         const rootPath = 'travel-mate-data'; 
         let path = tripId 
@@ -145,37 +154,26 @@ const Service = {
         else if (type === 'itinerary') q = query(q, orderBy('time', 'asc'));
         else q = query(q, orderBy('createdAt', 'desc'));
         
-        // 監聽 Firebase (這是非同步的，有網路才會觸發)
         return onSnapshot(q, (snap) => {
            const data = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-           
-           // 雲端資料來了！更新畫面
            callback(data);
-           
-           // 更新本地備份，供下次離線使用
            SafeStorage.set(backupKey, data);
         }, (err) => {
            console.warn("Firestore offline, keeping backup data visible.");
-           // 這裡不用做什麼，因為我們在第一步已經把備份資料秀出來了
         });
       } catch (e) { 
         console.warn("Subscribe error:", e);
         return () => {}; 
       }
     } else {
-      // 3. 如果是純本地模式 (或斷網導致變成 guest)，
-      // 雖然上面已經載入過一次，但為了確保邏輯一致，我們再確認一次
-      // 如果剛剛已經載入過備份，這裡就不需要再做什麼了，除非要監聽 storage 變更 (太複雜先略過)
       return () => {};
     }
   },
 
   op: async (tripId, type, action, data, id) => {
     const rootPath = 'travel-mate-data';
-    // 即使在雲端模式，我們也先嘗試更新本地備份，讓使用者感覺反應很快 (Optimistic UI)
-    // 但寫入邏輯比較複雜，這裡先維持：有網路上傳，沒網路寫本地 guest
     
-    if (Service.mode === 'cloud' && Service.db) {
+    if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
       try {
         let path = tripId 
           ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] 
@@ -185,11 +183,10 @@ const Service = {
         if (action === 'add') await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
         else if (action === 'update') await updateDoc(doc(colRef, id), data);
         else if (action === 'delete') await deleteDoc(doc(colRef, id));
-        // 寫入成功後 onSnapshot 會觸發並更新備份
         return null;
       } catch (e) { 
         console.error("Firebase Operation Failed:", e);
-        alert("網路不穩，無法儲存至雲端。");
+        alert("網路連線失敗，請檢查網路。");
         return null;
       }
     }
@@ -211,7 +208,7 @@ const Service = {
   },
   batchSwap: async (tripId, itemA, itemB) => {
     const rootPath = 'travel-mate-data';
-    if (Service.mode === 'cloud' && Service.db) {
+    if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
       const batch = writeBatch(Service.db);
       const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, 'itinerary'];
       batch.update(doc(Service.db, ...pathBase, itemA.id), { time: itemB.time });
@@ -225,10 +222,10 @@ const Service = {
   },
   batchDelete: async (tripId, type, ids) => {
     const rootPath = 'travel-mate-data';
-    if (Service.mode === 'cloud' && Service.db) {
+    if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
       try {
         const batch = writeBatch(Service.db);
-        const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, 'itinerary'];
+        const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type];
         ids.forEach(id => {
           batch.delete(doc(Service.db, ...pathBase, id));
         });
@@ -490,11 +487,11 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
         onCancel={() => setLogoutModal(false)} 
       />
 
-      <header className={`text-white p-6 pt-10 shadow-md rounded-b-3xl mb-6 flex justify-between items-start ${mode==='cloud'?'bg-sky-600':'bg-slate-600'}`}>
+      <header className={`text-white p-6 pt-10 shadow-md rounded-b-3xl mb-6 flex justify-between items-start ${mode==='cloud' && navigator.onLine ?'bg-sky-600':'bg-slate-600'}`}>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><Icons.Plane /> 我的旅程</h1>
           <div className="text-[10px] opacity-80 mt-1 flex items-center gap-1">
-            {mode==='cloud' ? <><Icons.Cloud size={10}/> 雲端備份中</> : <><Icons.CloudOff size={10}/> 離線模式</>}
+            {mode==='cloud' && navigator.onLine ? <><Icons.Cloud size={10}/> 雲端備份中</> : <><Icons.CloudOff size={10}/> 離線模式</>}
           </div>
         </div>
         {/* 新增：登出按鈕 */}
@@ -845,6 +842,21 @@ function AppContent() {
       document.head.appendChild(linkManifest);
     };
     setFavicon();
+
+    // 添加 Service Worker 註冊邏輯以支援 PWA
+    const registerPWA = () => {
+      if ('serviceWorker' in navigator) {
+        // 嘗試註冊標準 CRA 的 service-worker.js
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(registration => {
+            console.log('Service Worker registered with scope:', registration.scope);
+          })
+          .catch(error => {
+            console.log('Service Worker registration failed:', error);
+          });
+      }
+    };
+    registerPWA();
 
     Service.init().then(m => { setMode(m); setLoaded(true); });
   }, []);
