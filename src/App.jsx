@@ -16,7 +16,7 @@ const firebaseConfig = {
 };
 
 // ==========================================
-// 1. 風格與圖示系統
+// 1. 風格與圖示系統 (修復 SvgIcon 結構)
 // ==========================================
 
 const TYPE_STYLES = {
@@ -28,55 +28,118 @@ const TYPE_STYLES = {
   default:  { dot: 'bg-slate-400',     line: 'bg-slate-200',   text: 'text-slate-600',   bg: 'bg-white',      border: 'border-slate-100' }
 };
 
-const SvgIcon = ({ d, size = 20, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    {d}
+// FIX: 改用 children 傳遞 SVG 內容，避免 Object as Child 錯誤
+const SvgIcon = ({ children, size = 20, className = "", ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+    {children}
   </svg>
 );
 
 const Icons = {
-  Plane: (p) => <SvgIcon {...p} fill="currentColor" stroke="none" d={<path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>} />,
-  Calendar: (p) => <SvgIcon {...p} d={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>} />,
-  Camera: (p) => <SvgIcon {...p} d={<><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>} />,
-  Plus: (p) => <SvgIcon {...p} d={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />,
-  Trash: (p) => <SvgIcon {...p} d={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>} />,
-  Check: (p) => <SvgIcon {...p} d={<polyline points="20 6 9 17 4 12"/>} />,
-  MapPin: (p) => <SvgIcon {...p} d={<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></>} />,
-  ArrowLeft: (p) => <SvgIcon {...p} d={<><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></>} />,
-  X: (p) => <SvgIcon {...p} d={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />,
-  Settings: (p) => <SvgIcon {...p} d={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></>} />,
-  ArrowUp: (p) => <SvgIcon {...p} d={<><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></>} />,
-  ArrowDown: (p) => <SvgIcon {...p} d={<><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></>} />,
-  ChevronRight: (p) => <SvgIcon {...p} d={<polyline points="9 18 15 12 9 6"/>} />,
-  ChevronLeft: (p) => <SvgIcon {...p} d={<polyline points="15 18 9 12 15 6"/>} />,
-  FileText: (p) => <SvgIcon {...p} d={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>} />,
-  Map: (p) => <SvgIcon {...p} d={<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></>} />,
-  Refresh: (p) => <SvgIcon {...p} d={<><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>} />,
-  Cloud: (p) => <SvgIcon {...p} d={<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>} />,
-  CloudOff: (p) => <SvgIcon {...p} d={<><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3"/><line x1="1" y1="1" x2="23" y2="23"/></>} />,
-  Copy: (p) => <SvgIcon {...p} d={<><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>} />,
-  Loader: (p) => <SvgIcon {...p} className={`animate-spin ${p.className||''}`} d={<path d="M21 12a9 9 0 1 1-6.219-8.56"/>} />,
-  LogOut: (p) => <SvgIcon {...p} d={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>} />
+  Plane: (p) => <SvgIcon {...p} fill="currentColor" stroke="none"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></SvgIcon>,
+  Calendar: (p) => <SvgIcon {...p}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></SvgIcon>,
+  Camera: (p) => <SvgIcon {...p}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></SvgIcon>,
+  Plus: (p) => <SvgIcon {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></SvgIcon>,
+  Trash: (p) => <SvgIcon {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></SvgIcon>,
+  Check: (p) => <SvgIcon {...p}><polyline points="20 6 9 17 4 12"/></SvgIcon>,
+  MapPin: (p) => <SvgIcon {...p}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></SvgIcon>,
+  ArrowLeft: (p) => <SvgIcon {...p}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></SvgIcon>,
+  X: (p) => <SvgIcon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></SvgIcon>,
+  Settings: (p) => <SvgIcon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></SvgIcon>,
+  ArrowUp: (p) => <SvgIcon {...p}><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></SvgIcon>,
+  ArrowDown: (p) => <SvgIcon {...p}><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></SvgIcon>,
+  ChevronRight: (p) => <SvgIcon {...p}><polyline points="9 18 15 12 9 6"/></SvgIcon>,
+  ChevronLeft: (p) => <SvgIcon {...p}><polyline points="15 18 9 12 15 6"/></SvgIcon>,
+  FileText: (p) => <SvgIcon {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></SvgIcon>,
+  Map: (p) => <SvgIcon {...p}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></SvgIcon>,
+  Refresh: (p) => <SvgIcon {...p}><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></SvgIcon>,
+  Cloud: (p) => <SvgIcon {...p}><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></SvgIcon>,
+  CloudOff: (p) => <SvgIcon {...p}><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3"/><line x1="1" y1="1" x2="23" y2="23"/></SvgIcon>,
+  Copy: (p) => <SvgIcon {...p}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></SvgIcon>,
+  Loader: (p) => <SvgIcon {...p} className={`animate-spin ${p.className||''}`}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></SvgIcon>,
+  LogOut: (p) => <SvgIcon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></SvgIcon>,
+  Database: (p) => <SvgIcon {...p}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></SvgIcon>
 };
 
 // ==========================================
-// 2. Firebase Imports & Service (修改後：增強型離線支援)
+// 2. Local Database (IndexedDB)
 // ==========================================
 
-const SafeStorage = {
-  get: (key, fallback) => {
-    try { const item = localStorage.getItem(key); return item ? JSON.parse(item) : fallback; } catch { return fallback; }
+const LocalDB = {
+  dbName: 'TravelMateDB',
+  version: 1,
+  
+  init: () => new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      resolve(null); // Fallback if IndexedDB not supported
+      return;
+    }
+    const req = indexedDB.open(LocalDB.dbName, LocalDB.version);
+    
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('backup')) {
+        db.createObjectStore('backup');
+      }
+    };
+    
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }),
+
+  set: async (key, value) => {
+    try {
+      const db = await LocalDB.init();
+      if (!db) return;
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('backup', 'readwrite');
+        const store = tx.objectStore('backup');
+        store.put(value, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) {
+      console.error("LocalDB Save Failed:", e);
+    }
   },
-  set: (key, value) => {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+
+  get: async (key) => {
+    try {
+      const db = await LocalDB.init();
+      if (!db) return [];
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('backup', 'readonly');
+        const store = tx.objectStore('backup');
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) {
+      console.error("LocalDB Read Failed:", e);
+      return [];
+    }
   },
-  clear: () => { try { localStorage.clear(); } catch {} }
+
+  clear: async () => {
+    try {
+      const db = await LocalDB.init();
+      if (!db) return;
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('backup', 'readwrite');
+        const store = tx.objectStore('backup');
+        store.clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) {
+      console.error("LocalDB Clear Failed:", e);
+    }
+  }
 };
 
 const Service = {
   db: null, auth: null, user: null, mode: 'loading',
   init: async () => {
-    // 1. 偵測網路狀態，如果沒網路直接進入本地模式 (秒開)
     if (!navigator.onLine) {
       console.log("Offline detected, starting in local mode.");
       Service.user = { uid: 'guest' };
@@ -103,7 +166,6 @@ const Service = {
       }
       
       return new Promise(resolve => {
-        // 將 timeout 縮短為 2 秒，避免等待過久
         const timeout = setTimeout(() => {
              Service.user = { uid: 'guest' }; 
              Service.mode = 'local'; 
@@ -124,24 +186,14 @@ const Service = {
     }
   },
   
-  // 核心修改：優先讀取備份 (Instant Load)
   subscribe: (tripId, type, callback) => {
-    const backupKey = tripId ? `tm_backup_${type}_${tripId}` : 'tm_backup_trips';
-    const guestKey = tripId ? `tm_v25_${type}_${tripId}` : 'tm_v25_trips';
+    const backupKey = tripId ? `tm_v3_${type}_${tripId}` : 'tm_v3_trips';
 
-    // 1. 無論任何模式，先嘗試讀取本地備份，有資料就先顯示
-    const localBackup = SafeStorage.get(backupKey, []);
-    const localGuest = SafeStorage.get(guestKey, []);
-    
-    if (localBackup.length > 0) {
-      callback(localBackup);
-    } else if (localGuest.length > 0) {
-      callback(localGuest);
-    } else {
-      callback([]); 
-    }
+    LocalDB.get(backupKey).then(data => {
+      if (data && data.length > 0) callback(data);
+      else callback([]); 
+    });
 
-    // 2. 如果是雲端模式且資料庫可用，嘗試連線更新
     if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
       try {
         const rootPath = 'travel-mate-data'; 
@@ -157,12 +209,11 @@ const Service = {
         return onSnapshot(q, (snap) => {
            const data = snap.docs.map(d => ({ ...d.data(), id: d.id }));
            callback(data);
-           SafeStorage.set(backupKey, data);
+           LocalDB.set(backupKey, data);
         }, (err) => {
-           console.warn("Firestore offline, keeping backup data visible.");
+           console.warn("Firestore offline, viewing local data.");
         });
       } catch (e) { 
-        console.warn("Subscribe error:", e);
         return () => {}; 
       }
     } else {
@@ -171,10 +222,9 @@ const Service = {
   },
 
   op: async (tripId, type, action, data, id) => {
-    const rootPath = 'travel-mate-data';
-    
     if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
       try {
+        const rootPath = 'travel-mate-data';
         let path = tripId 
           ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] 
           : ['artifacts', rootPath, 'public', 'data', 'trips'];
@@ -186,64 +236,38 @@ const Service = {
         return null;
       } catch (e) { 
         console.error("Firebase Operation Failed:", e);
-        alert("網路連線失敗，請檢查網路。");
+        alert("連線失敗，無法同步至雲端。");
         return null;
       }
-    }
-    
-    // 本地模式寫入 (Guest)
-    const key = tripId ? `tm_v25_${type}_${tripId}` : 'tm_v25_trips';
-    let list = SafeStorage.get(key, []);
-    if (action === 'add') {
-      const newItem = { ...data, id: Date.now().toString() + Math.random().toString().slice(2) };
-      list = tripId && type === 'itinerary' ? [...list, newItem].sort((a,b)=>(a.time||'').localeCompare(b.time||'')) : [newItem, ...list];
-    } else if (action === 'update') {
-      list = list.map(i => i.id === id ? { ...i, ...data } : i);
-      if (tripId && type === 'itinerary') list.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-    } else if (action === 'delete') {
-      list = list.filter(i => i.id !== id);
-    }
-    SafeStorage.set(key, list);
-    return list;
-  },
-  batchSwap: async (tripId, itemA, itemB) => {
-    const rootPath = 'travel-mate-data';
-    if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
-      const batch = writeBatch(Service.db);
-      const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, 'itinerary'];
-      batch.update(doc(Service.db, ...pathBase, itemA.id), { time: itemB.time });
-      batch.update(doc(Service.db, ...pathBase, itemB.id), { time: itemA.time });
-      await batch.commit();
-      return null;
     } else {
-      await Service.op(tripId, 'itinerary', 'update', { ...itemA, time: itemB.time }, itemA.id);
-      return await Service.op(tripId, 'itinerary', 'update', { ...itemB, time: itemA.time }, itemB.id);
+      alert("目前處於離線模式，變更將無法儲存至雲端，請連接網路後再試。");
+      return null;
+    }
+  },
+  
+  batchSwap: async (tripId, itemA, itemB) => {
+    if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
+        const batch = writeBatch(Service.db);
+        const pathBase = ['artifacts', 'travel-mate-data', 'public', 'data', 'trips', tripId, 'itinerary'];
+        batch.update(doc(Service.db, ...pathBase, itemA.id), { time: itemB.time });
+        batch.update(doc(Service.db, ...pathBase, itemB.id), { time: itemA.time });
+        await batch.commit();
     }
   },
   batchDelete: async (tripId, type, ids) => {
-    const rootPath = 'travel-mate-data';
     if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
-      try {
         const batch = writeBatch(Service.db);
-        const pathBase = ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type];
-        ids.forEach(id => {
-          batch.delete(doc(Service.db, ...pathBase, id));
-        });
+        const pathBase = ['artifacts', 'travel-mate-data', 'public', 'data', 'trips', tripId, type];
+        ids.forEach(id => batch.delete(doc(Service.db, ...pathBase, id)));
         await batch.commit();
-        return null;
-      } catch (e) { console.error(e); return null; }
-    } else {
-      const key = tripId ? `tm_v25_${type}_${tripId}` : 'tm_v25_trips';
-      let list = SafeStorage.get(key, []);
-      list = list.filter(i => !ids.includes(i.id));
-      SafeStorage.set(key, list);
-      return list;
     }
   },
+
   logout: async () => {
     try {
       if (Service.auth) await signOut(Service.auth);
-      SafeStorage.clear();
+      await LocalDB.clear();
+      localStorage.clear();
       window.location.reload();
     } catch (e) {
       console.error("Logout failed", e);
@@ -253,7 +277,7 @@ const Service = {
 };
 
 // ==========================================
-// 3. UI 元件 (Modal, Input, etc.)
+// 3. UI 元件
 // ==========================================
 const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
@@ -404,7 +428,6 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// 恢復為 Base64 壓縮 (800px)
 const resizeImage = (file) => new Promise(resolve => {
   if (!file) resolve(null);
   const reader = new FileReader();
@@ -454,7 +477,7 @@ const renderTextWithLinks = (text) => {
     if (part.match(/^https?:\/\//)) {
       return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-sky-600 underline break-all hover:text-sky-800" onClick={e => e.stopPropagation()}>{part}</a>;
     }
-    return part;
+    return <span key={i}>{part}</span>; // Wrap text parts in span
   });
 };
 
@@ -468,6 +491,18 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
   const [newTrip, setNewTrip] = useState({ name: '', startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] });
   const [deleteModal, setDeleteModal] = useState(false);
   const [logoutModal, setLogoutModal] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const handleCreate = () => {
     if(!newTrip.name) return;
@@ -487,11 +522,11 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
         onCancel={() => setLogoutModal(false)} 
       />
 
-      <header className={`text-white p-6 pt-10 shadow-md rounded-b-3xl mb-6 flex justify-between items-start ${mode==='cloud' && navigator.onLine ?'bg-sky-600':'bg-slate-600'}`}>
+      <header className={`text-white p-6 pt-10 shadow-md rounded-b-3xl mb-6 flex justify-between items-start ${mode==='cloud' && isOnline ?'bg-sky-600':'bg-slate-600'}`}>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><Icons.Plane /> 我的旅程</h1>
           <div className="text-[10px] opacity-80 mt-1 flex items-center gap-1">
-            {mode==='cloud' && navigator.onLine ? <><Icons.Cloud size={10}/> 雲端備份中</> : <><Icons.CloudOff size={10}/> 離線模式</>}
+            {mode==='cloud' && isOnline ? <span className="flex items-center gap-1"><Icons.Cloud size={10}/> 雲端備份中</span> : <span className="flex items-center gap-1"><Icons.CloudOff size={10}/> 離線模式</span>}
           </div>
         </div>
         {/* 新增：登出按鈕 */}
@@ -549,6 +584,18 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
   const [gallery, setGallery] = useState(null);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null, type: 'itinerary' });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   
   // Forms
   const [newItem, setNewItem] = useState({ time: '', activity: '', location: '', type: 'fun', notes: '', attachments: [] });
@@ -557,10 +604,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
   const [settingsData, setSettingsData] = useState({ name: trip.name, startDate: trip.startDate, endDate: trip.endDate, coverImage: trip.coverImage });
 
   const fileRef = useRef(null);
-  const coverRef = useRef(null);
-  const memFileRef = useRef(null);
-  const editFileRef = useRef(null);
-
+  
   const [items, setItems] = useState([]);
   const [memories, setMemories] = useState([]);
 
@@ -685,7 +729,15 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
          {trip.coverImage && <><img src={trip.coverImage} className="absolute inset-0 w-full h-full object-cover"/><div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/80"></div></>}
          <div className="relative z-10 h-full flex flex-col justify-between">
            <div className="flex items-center gap-3"><button onClick={onBack} className="p-1 hover:bg-white/20 rounded-full"><Icons.Plane className="transform rotate-180"/></button><div className="flex-1 min-w-0"><h1 className="text-xl font-bold truncate">{trip.name}</h1><p className="text-xs opacity-80">{trip.startDate} ~ {trip.endDate}</p></div><button onClick={()=>{setSettingsData({name:trip.name, startDate:trip.startDate, endDate:trip.endDate, coverImage:trip.coverImage}); setSettingsOpen(true)}} className="p-2 hover:bg-white/20 rounded-full"><Icons.Settings/></button></div>
-           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">{Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? 'bg-white text-sky-600 scale-105 shadow' : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}</div>
+           
+           <div className="flex justify-between items-end">
+             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">{Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? 'bg-white text-sky-600 scale-105 shadow' : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}</div>
+             
+             {/* 離線/雲端狀態指示燈 (在內頁顯示) */}
+             <div className="pb-3 text-[10px] opacity-80 flex items-center gap-1 bg-black/20 px-2 py-1 rounded-full backdrop-blur-sm">
+                {mode==='cloud' && isOnline ? <span className="flex items-center gap-1"><Icons.Cloud size={10}/> 雲端</span> : <span className="flex items-center gap-1"><Icons.Database size={10}/> 本地</span>}
+             </div>
+           </div>
          </div>
       </header>
 
@@ -696,7 +748,8 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
             <div className="flex gap-2">
               {dailyItems.length > 0 && <button onClick={()=>setDeleteModal({isOpen:true, type:'batch_day'})} className="text-red-500 bg-white border border-red-100 p-2 rounded-full shadow-sm"><Icons.Trash/></button>}
               <button onClick={()=>setImportOpen(true)} className="text-sky-600 bg-white border border-sky-100 p-2 rounded-full"><Icons.FileText/></button>
-              <button onClick={()=>{setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[]}); setEditOpen(true)}} className="text-white bg-sky-600 p-2 rounded-full shadow-md"><Icons.Plus/></button>
+              {/* 離線時停用新增按鈕，避免衝突 */}
+              <button onClick={()=>{if(!isOnline){alert("離線模式無法新增行程");return;} setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[]}); setEditOpen(true)}} className={`p-2 rounded-full shadow-md ${!isOnline ? 'bg-slate-400 cursor-not-allowed' : 'bg-sky-600 text-white'}`}><Icons.Plus/></button>
             </div>
             </div>
             
@@ -762,7 +815,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
           </div>
         ) : (
           <div className="space-y-4">
-            <button onClick={()=>{setNewMem({text:'', mood:'happy', attachments:[], linkedId:''}); setEditOpen(true);}} className="w-full py-3 bg-indigo-100 text-indigo-600 rounded-lg font-bold flex items-center justify-center gap-2"><Icons.Camera/> 新增回憶</button>
+            <button onClick={()=>{if(!isOnline){alert("離線模式無法新增回憶");return;} setNewMem({text:'', mood:'happy', attachments:[], linkedId:''}); setEditOpen(true);}} className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 ${!isOnline?'bg-slate-200 text-slate-400 cursor-not-allowed':'bg-indigo-100 text-indigo-600'}`}><Icons.Camera/> 新增回憶</button>
             {dailyMemories.map(m=>{
                const linked = dailyItems.find(i=>i.id===m.linkedId);
                const moodData = MOODS.find(x=>x.k===m.mood) || MOODS[0];
@@ -790,10 +843,8 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
   );
 }
 
-// ==========================================
-// 6. 主程式 (AppContent & Export)
-// ==========================================
-
+// === AppContent ===
+// 將 AppContent 移動到 TripDetail 之後，App 之前
 function AppContent() {
   const [trips, setTrips] = useState([]);
   const [activeTripId, setActiveTripId] = useState(null);
@@ -842,21 +893,6 @@ function AppContent() {
       document.head.appendChild(linkManifest);
     };
     setFavicon();
-
-    // 添加 Service Worker 註冊邏輯以支援 PWA
-    const registerPWA = () => {
-      if ('serviceWorker' in navigator) {
-        // 嘗試註冊標準 CRA 的 service-worker.js
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(registration => {
-            console.log('Service Worker registered with scope:', registration.scope);
-          })
-          .catch(error => {
-            console.log('Service Worker registration failed:', error);
-          });
-      }
-    };
-    registerPWA();
 
     Service.init().then(m => { setMode(m); setLoaded(true); });
   }, []);
