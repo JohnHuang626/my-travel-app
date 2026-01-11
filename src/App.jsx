@@ -281,37 +281,63 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel }) => {
 // 新增：資料管理 Modal
 const DataToolsModal = ({ isOpen, onClose }) => {
   const [status, setStatus] = useState('');
+  const [exportData, setExportData] = useState('');
+  
+  useEffect(() => {
+    if (isOpen) {
+        setStatus('');
+        setExportData('');
+    }
+  }, [isOpen]);
   
   const handleExport = async () => {
     setStatus('正在打包資料... (請稍候)');
-    const dataStr = await Service.exportAll();
-    if (dataStr === '{}') { setStatus('沒有可匯出的資料'); return; }
+    setExportData('');
     
-    // 複製到剪貼簿 (使用較相容的方法)
-    const textArea = document.createElement("textarea");
-    textArea.value = dataStr;
-    document.body.appendChild(textArea);
-    textArea.select();
-    try {
-      document.execCommand('copy');
-      setStatus('✅ 備份代碼已複製！請到桌面 App 貼上。');
-    } catch (err) {
-      setStatus('❌ 複製失敗，請手動複製。');
-    }
-    document.body.removeChild(textArea);
+    // 給一點時間讓 UI 更新
+    setTimeout(async () => {
+        try {
+            const dataStr = await Service.exportAll();
+            if (dataStr === '{}' || dataStr === '[]') { 
+                setStatus('沒有可匯出的資料 (本地資料庫為空)'); 
+                return; 
+            }
+            
+            setExportData(dataStr);
+            
+            // 複製到剪貼簿
+            const textArea = document.createElement("textarea");
+            textArea.value = dataStr;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+              const successful = document.execCommand('copy');
+              if(successful) setStatus('✅ 備份代碼已複製！若貼上失敗，請手動複製下方文字。');
+              else setStatus('⚠️ 自動複製失敗，請手動複製下方文字。');
+            } catch (err) {
+              setStatus('⚠️ 自動複製失敗，請手動複製下方文字。');
+            }
+            document.body.removeChild(textArea);
+        } catch (e) {
+            setStatus('❌ 匯出錯誤: ' + e.message);
+        }
+    }, 100);
   };
 
   const handleImport = async () => {
     const str = prompt("請貼上備份代碼：");
     if (!str) return;
     setStatus('正在匯入...');
-    const success = await Service.importAll(str);
-    if (success) {
-      alert("匯入成功！即將重新整理...");
-      window.location.reload();
-    } else {
-      setStatus('❌ 匯入失敗，格式錯誤');
-    }
+    // Small delay to render status
+    setTimeout(async () => {
+        const success = await Service.importAll(str);
+        if (success) {
+          alert("匯入成功！即將重新整理...");
+          window.location.reload();
+        } else {
+          setStatus('❌ 匯入失敗，格式錯誤');
+        }
+    }, 100);
   };
 
   if (!isOpen) return null;
@@ -324,8 +350,20 @@ const DataToolsModal = ({ isOpen, onClose }) => {
         </div>
         
         <button onClick={handleExport} className="w-full py-3 bg-slate-100 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-200">
-          <Icons.Upload size={18} /> 匯出備份 (複製代碼)
+          <Icons.Upload size={18} /> 匯出備份 (產生代碼)
         </button>
+        
+        {exportData && (
+            <div className="animate-in fade-in slide-in-from-top-2">
+                <label className="text-xs text-slate-500 block mb-1">備份代碼 (請全選複製)：</label>
+                <textarea 
+                    className="w-full h-32 border p-2 rounded bg-slate-50 text-[10px] font-mono break-all focus:ring-2 focus:ring-sky-500 outline-none"
+                    value={exportData}
+                    readOnly
+                    onClick={(e) => e.target.select()}
+                />
+            </div>
+        )}
         
         <button onClick={handleImport} className="w-full py-3 bg-slate-100 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-200">
           <Icons.Download size={18} /> 匯入備份 (貼上代碼)
