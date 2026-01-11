@@ -57,40 +57,32 @@ const Icons = {
   Copy: (p) => <SvgIcon {...p}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></SvgIcon>,
   Loader: (p) => <SvgIcon {...p} className={`animate-spin ${p.className||''}`}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></SvgIcon>,
   LogOut: (p) => <SvgIcon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></SvgIcon>,
-  Database: (p) => <SvgIcon {...p}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></SvgIcon>
+  Database: (p) => <SvgIcon {...p}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></SvgIcon>,
+  Download: (p) => <SvgIcon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></SvgIcon>,
+  Upload: (p) => <SvgIcon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></SvgIcon>
 };
 
 // ==========================================
-// 2. Local Database (IndexedDB) - 核心修改：穩定連線版
+// 2. Local Database (IndexedDB)
 // ==========================================
 
 const LocalDB = {
   dbName: 'TravelMateDB',
   version: 1,
-  dbPromise: null, // Cache the promise
+  dbPromise: null,
 
   init: () => {
     if (!window.indexedDB) return Promise.resolve(null);
-    
-    // 如果已經有連線 Promise，直接回傳
     if (LocalDB.dbPromise) return LocalDB.dbPromise;
 
     LocalDB.dbPromise = new Promise((resolve, reject) => {
       const req = indexedDB.open(LocalDB.dbName, LocalDB.version);
-      
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
-        if (!db.objectStoreNames.contains('backup')) {
-          db.createObjectStore('backup');
-        }
+        if (!db.objectStoreNames.contains('backup')) db.createObjectStore('backup');
       };
-      
       req.onsuccess = () => resolve(req.result);
-      
-      req.onerror = () => {
-        LocalDB.dbPromise = null; // 重置以便下次重試
-        reject(req.error);
-      };
+      req.onerror = () => { LocalDB.dbPromise = null; reject(req.error); };
     });
     return LocalDB.dbPromise;
   },
@@ -106,9 +98,7 @@ const LocalDB = {
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
       });
-    } catch (e) {
-      console.error("LocalDB Save Failed:", e);
-    }
+    } catch (e) { console.error("LocalDB Save Failed:", e); }
   },
 
   get: async (key) => {
@@ -122,10 +112,21 @@ const LocalDB = {
         req.onsuccess = () => resolve(req.result || []);
         req.onerror = () => reject(req.error);
       });
-    } catch (e) {
-      console.error("LocalDB Read Failed:", e);
-      return [];
-    }
+    } catch (e) { console.error("LocalDB Read Failed:", e); return []; }
+  },
+
+  getAllKeys: async () => {
+    try {
+      const db = await LocalDB.init();
+      if (!db) return [];
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('backup', 'readonly');
+        const store = tx.objectStore('backup');
+        const req = store.getAllKeys();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) { return []; }
   },
 
   clear: async () => {
@@ -139,9 +140,7 @@ const LocalDB = {
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
       });
-    } catch (e) {
-      console.error("LocalDB Clear Failed:", e);
-    }
+    } catch (e) { console.error("LocalDB Clear Failed:", e); }
   }
 };
 
@@ -149,70 +148,32 @@ const Service = {
   db: null, auth: null, user: null, mode: 'loading',
   init: async () => {
     if (!navigator.onLine) {
-      console.log("Offline detected, starting in local mode.");
-      Service.user = { uid: 'guest' };
-      Service.mode = 'local';
-      return 'local';
+      Service.user = { uid: 'guest' }; Service.mode = 'local'; return 'local';
     }
-
     try {
       const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
       Service.auth = getAuth(app);
       Service.db = getFirestore(app);
-
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(Service.auth, __initial_auth_token);
-      } else {
-        if (!Service.auth.currentUser) {
-           try { await signInAnonymously(Service.auth); } catch(e){
-             console.warn("Auth failed, likely offline");
-             Service.user = { uid: 'guest' };
-             Service.mode = 'local';
-             return 'local';
-           }
-        }
-      }
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(Service.auth, __initial_auth_token);
+      else if (!Service.auth.currentUser) try { await signInAnonymously(Service.auth); } catch(e){ Service.user = { uid: 'guest' }; Service.mode = 'local'; return 'local'; }
       
       return new Promise(resolve => {
-        const timeout = setTimeout(() => {
-             Service.user = { uid: 'guest' }; 
-             Service.mode = 'local'; 
-             resolve('local');
-        }, 2000);
-
-        onAuthStateChanged(Service.auth, (u) => {
-          clearTimeout(timeout);
-          if (u) { Service.user = u; Service.mode = 'cloud'; resolve('cloud'); }
-          else { Service.user = { uid: 'guest' }; Service.mode = 'local'; resolve('local'); }
-        });
+        const timeout = setTimeout(() => { Service.user = { uid: 'guest' }; Service.mode = 'local'; resolve('local'); }, 2000);
+        onAuthStateChanged(Service.auth, (u) => { clearTimeout(timeout); if (u) { Service.user = u; Service.mode = 'cloud'; resolve('cloud'); } else { Service.user = { uid: 'guest' }; Service.mode = 'local'; resolve('local'); } });
       });
-    } catch (e) { 
-      console.warn("Firebase Init Error (Offline?):", e); 
-      Service.user = { uid: 'guest' };
-      Service.mode = 'local';
-      return 'local';
-    }
+    } catch (e) { Service.user = { uid: 'guest' }; Service.mode = 'local'; return 'local'; }
   },
   
   subscribe: (tripId, type, callback) => {
     const backupKey = tripId ? `tm_v3_${type}_${tripId}` : 'tm_v3_trips';
-    let isActive = true; // 防止組件卸載後呼叫 callback
+    let isActive = true;
+    LocalDB.get(backupKey).then(data => { if (isActive && data && data.length > 0) callback(data); else if (isActive) callback([]); });
 
-    // 1. 立即讀取 IndexedDB (非同步)
-    LocalDB.get(backupKey).then(data => {
-      if (isActive && data && data.length > 0) callback(data);
-      else if (isActive) callback([]); 
-    });
-
-    // 2. 如果連線正常，監聽雲端並更新 IndexedDB
     let unsubscribe = () => {};
     if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
       try {
         const rootPath = 'travel-mate-data'; 
-        let path = tripId 
-          ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] 
-          : ['artifacts', rootPath, 'public', 'data', 'trips'];
-        
+        let path = tripId ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] : ['artifacts', rootPath, 'public', 'data', 'trips'];
         let q = collection(Service.db, ...path);
         if (!tripId) q = query(q, orderBy('startDate', 'desc'));
         else if (type === 'itinerary') q = query(q, orderBy('time', 'asc'));
@@ -223,41 +184,25 @@ const Service = {
            const data = snap.docs.map(d => ({ ...d.data(), id: d.id }));
            callback(data);
            LocalDB.set(backupKey, data);
-        }, (err) => {
-           console.warn("Firestore offline, viewing local data.");
-        });
-      } catch (e) { 
-        console.error("Subscribe Error", e);
-      }
+        }, () => {});
+      } catch (e) {}
     }
-
-    return () => {
-      isActive = false; // 標記為失效
-      unsubscribe();
-    };
+    return () => { isActive = false; unsubscribe(); };
   },
 
   op: async (tripId, type, action, data, id) => {
     if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
       try {
         const rootPath = 'travel-mate-data';
-        let path = tripId 
-          ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] 
-          : ['artifacts', rootPath, 'public', 'data', 'trips'];
-        
+        let path = tripId ? ['artifacts', rootPath, 'public', 'data', 'trips', tripId, type] : ['artifacts', rootPath, 'public', 'data', 'trips'];
         const colRef = collection(Service.db, ...path);
         if (action === 'add') await addDoc(colRef, { ...data, createdAt: serverTimestamp() });
         else if (action === 'update') await updateDoc(doc(colRef, id), data);
         else if (action === 'delete') await deleteDoc(doc(colRef, id));
         return null;
-      } catch (e) { 
-        console.error("Firebase Operation Failed:", e);
-        alert("連線失敗，無法同步至雲端。");
-        return null;
-      }
+      } catch (e) { alert("連線失敗，無法同步至雲端。"); return null; }
     } else {
-      alert("目前處於離線模式，變更將無法儲存至雲端，請連接網路後再試。");
-      return null;
+      alert("目前處於離線模式，變更將無法儲存至雲端，請連接網路後再試。"); return null;
     }
   },
   
@@ -273,22 +218,36 @@ const Service = {
   batchDelete: async (tripId, type, ids) => {
     if (Service.mode === 'cloud' && Service.db && navigator.onLine) {
         const batch = writeBatch(Service.db);
-        const pathBase = ['artifacts', 'travel-mate-data', 'public', 'data', 'trips', tripId, type];
+        const pathBase = ['artifacts', 'travel-mate-data', 'public', 'data', 'trips', tripId, 'itinerary'];
         ids.forEach(id => batch.delete(doc(Service.db, ...pathBase, id)));
         await batch.commit();
     }
   },
 
-  logout: async () => {
-    try {
-      if (Service.auth) await signOut(Service.auth);
-      await LocalDB.clear();
-      localStorage.clear();
-      window.location.reload();
-    } catch (e) {
-      console.error("Logout failed", e);
-      window.location.reload();
+  // 新增：匯出所有 IndexedDB 資料 (JSON 字串)
+  exportAll: async () => {
+    const keys = await LocalDB.getAllKeys();
+    const exportData = {};
+    for (const key of keys) {
+      exportData[key] = await LocalDB.get(key);
     }
+    return JSON.stringify(exportData);
+  },
+
+  // 新增：匯入資料
+  importAll: async (jsonStr) => {
+    try {
+      const data = JSON.parse(jsonStr);
+      for (const key in data) {
+        await LocalDB.set(key, data[key]);
+      }
+      return true;
+    } catch (e) { console.error(e); return false; }
+  },
+
+  logout: async () => {
+    try { if (Service.auth) await signOut(Service.auth); await LocalDB.clear(); localStorage.clear(); window.location.reload(); } 
+    catch (e) { window.location.reload(); }
   }
 };
 
@@ -316,6 +275,69 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel }) => {
         <div className="flex gap-3"><button onClick={onCancel} className="flex-1 py-2 bg-slate-100 rounded text-sm">取消</button><button onClick={onConfirm} className="flex-1 py-2 bg-red-500 text-white rounded text-sm">確定</button></div>
       </div>
     </div>
+  );
+};
+
+// 新增：資料管理 Modal
+const DataToolsModal = ({ isOpen, onClose }) => {
+  const [status, setStatus] = useState('');
+  
+  const handleExport = async () => {
+    setStatus('正在打包資料... (請稍候)');
+    const dataStr = await Service.exportAll();
+    if (dataStr === '{}') { setStatus('沒有可匯出的資料'); return; }
+    
+    // 複製到剪貼簿 (使用較相容的方法)
+    const textArea = document.createElement("textarea");
+    textArea.value = dataStr;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      setStatus('✅ 備份代碼已複製！請到桌面 App 貼上。');
+    } catch (err) {
+      setStatus('❌ 複製失敗，請手動複製。');
+    }
+    document.body.removeChild(textArea);
+  };
+
+  const handleImport = async () => {
+    const str = prompt("請貼上備份代碼：");
+    if (!str) return;
+    setStatus('正在匯入...');
+    const success = await Service.importAll(str);
+    if (success) {
+      alert("匯入成功！即將重新整理...");
+      window.location.reload();
+    } else {
+      setStatus('❌ 匯入失敗，格式錯誤');
+    }
+  };
+
+  if (!isOpen) return null;
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="資料管理中心">
+      <div className="space-y-4">
+        <div className="bg-blue-50 p-3 rounded text-xs text-blue-700">
+          <p className="font-bold mb-1">💡 為什麼需要這個？</p>
+          <p>iOS 會將「網頁」和「桌面書籤」視為不同 App。如果您在 Safari 存了資料，加到桌面後卻看不見，請用此工具搬移資料。</p>
+        </div>
+        
+        <button onClick={handleExport} className="w-full py-3 bg-slate-100 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-200">
+          <Icons.Upload size={18} /> 匯出備份 (複製代碼)
+        </button>
+        
+        <button onClick={handleImport} className="w-full py-3 bg-slate-100 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-200">
+          <Icons.Download size={18} /> 匯入備份 (貼上代碼)
+        </button>
+
+        <button onClick={()=>{if(confirm("確定清除所有資料與登出？")) Service.logout()}} className="w-full py-3 bg-red-50 text-red-600 rounded-lg flex items-center justify-center gap-2 hover:bg-red-100 mt-6 border border-red-100">
+          <Icons.LogOut size={18} /> 清除資料並登出
+        </button>
+
+        {status && <div className="text-center text-sm font-bold text-emerald-600 animate-pulse">{status}</div>}
+      </div>
+    </Modal>
   );
 };
 
@@ -506,8 +528,11 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
   const [isCreating, setIsCreating] = useState(false);
   const [newTrip, setNewTrip] = useState({ name: '', startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] });
   const [deleteModal, setDeleteModal] = useState(false);
-  const [logoutModal, setLogoutModal] = useState(false);
+  const [dataToolsModal, setDataToolsModal] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  // 檢測是否為 Standalone (PWA/桌面書籤模式)
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -529,30 +554,18 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
   return (
     <div className="pb-20">
       <ConfirmModal isOpen={!!deleteModal} title="刪除" message="確定刪除？" onConfirm={() => { onDelete(deleteModal); setDeleteModal(null); }} onCancel={() => setDeleteModal(null)} />
-      {/* 登出確認 Modal */}
-      <ConfirmModal 
-        isOpen={logoutModal} 
-        title="登出並清除資料" 
-        message="確定要登出嗎？此動作將會清除這台裝置上的所有暫存資料與照片。" 
-        onConfirm={() => Service.logout()} 
-        onCancel={() => setLogoutModal(false)} 
-      />
+      
+      {/* 資料工具 Modal */}
+      <DataToolsModal isOpen={dataToolsModal} onClose={() => setDataToolsModal(false)} />
 
       <header className={`text-white p-6 pt-10 shadow-md rounded-b-3xl mb-6 flex justify-between items-start ${mode==='cloud' && isOnline ?'bg-sky-600':'bg-slate-600'}`}>
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><Icons.Plane /> 我的旅程</h1>
           <div className="text-[10px] opacity-80 mt-1 flex items-center gap-1">
+            {isStandalone && <span className="bg-white/20 px-1 rounded flex items-center gap-1">📱 App 模式</span>}
             {mode==='cloud' && isOnline ? <span className="flex items-center gap-1"><Icons.Cloud size={10}/> 雲端備份中</span> : <span className="flex items-center gap-1"><Icons.CloudOff size={10}/> 離線模式</span>}
           </div>
         </div>
-        {/* 新增：登出按鈕 */}
-        <button 
-          onClick={() => setLogoutModal(true)}
-          className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"
-          title="登出並清除資料"
-        >
-          <Icons.LogOut size={20} />
-        </button>
       </header>
 
       <div className="px-4 space-y-4">
@@ -583,6 +596,11 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
           ))}
         </div>
       </div>
+      
+      {/* 左下角：資料管理按鈕 (取代原本的 Reset) */}
+      <button onClick={() => setDataToolsModal(true)} className="fixed bottom-4 left-4 z-50 p-3 bg-white text-slate-600 shadow-lg rounded-full border border-slate-200 hover:text-sky-600 hover:border-sky-200 transition-colors">
+        <Icons.Database size={20}/>
+      </button>
     </div>
   );
 }
@@ -939,7 +957,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 max-w-md mx-auto shadow-2xl overflow-hidden border-x border-slate-200 relative">
-      <button onClick={()=>{if(confirm('重置所有資料?')){localStorage.clear(); window.location.reload();}}} className="fixed bottom-1 left-1 z-50 p-2 text-slate-300 hover:text-red-500 opacity-50"><Icons.Refresh size={12}/></button>
+      <button onClick={()=>{if(confirm('重置所有資料?')){localStorage.clear(); window.location.reload();}}} className="fixed bottom-1 left-1 z-50 p-2 text-slate-300 hover:text-red-500 opacity-50 hidden"><Icons.Refresh size={12}/></button>
 
       {activeTrip ? (
         <TripDetail 
