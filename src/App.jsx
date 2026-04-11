@@ -534,7 +534,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
   const [newItem, setNewItem] = useState({ time: '', activity: '', location: '', type: 'fun', notes: '', attachments: [] });
   const [newMem, setNewMem] = useState({ text: '', mood: 'happy', attachments: [], linkedId: '' });
   const [importText, setImportText] = useState('');
-
+  
   const fileRef = useRef(null);
   
   const [items, setItems] = useState([]);
@@ -606,161 +606,181 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
   return (
     <>
       {/* 行動裝置/電腦版的正常畫面，列印時隱藏 */}
-      <div className="print:hidden flex flex-col h-full">
-        <ConfirmModal 
-          isOpen={deleteModal.isOpen} 
-          title={deleteModal.type === 'batch_day' ? "清空當日行程" : "確認刪除"} 
-          message={deleteModal.type === 'batch_day' ? `確定要刪除 Day ${day} 的所有行程嗎？` : "確定要刪除這個項目嗎？"}
-          onConfirm={() => { 
-            if (deleteModal.type === 'batch_day') performBatchDelete();
-            else handleItemAction(deleteModal.type, 'delete', null, deleteModal.id); 
-            setDeleteModal({ isOpen: false }); 
-          }} 
-          onCancel={() => setDeleteModal({ isOpen: false })} 
-        />
-        <ImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
-        <TripSettingsModal isOpen={settingsOpen} trip={trip} onClose={() => setSettingsOpen(false)} onSave={onUpdate} handleImg={handleImg} isProcessing={isProcessing} />
-        {gallery && <ImageViewer images={gallery.images} initialIndex={gallery.index} onClose={() => setGallery(null)} />}
+      <ConfirmModal 
+        isOpen={deleteModal.isOpen} 
+        title={deleteModal.type === 'batch_day' ? "清空當日行程" : "確認刪除"} 
+        message={deleteModal.type === 'batch_day' ? `確定要刪除 Day ${day} 的所有行程嗎？` : "確定要刪除這個項目嗎？"}
+        onConfirm={() => { 
+          if (deleteModal.type === 'batch_day') {
+             performBatchDelete();
+          } else {
+             handleItemAction(deleteModal.type, 'delete', null, deleteModal.id); 
+          }
+          setDeleteModal({ isOpen: false }); 
+        }} 
+        onCancel={() => setDeleteModal({ isOpen: false })} 
+      />
+      <ImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
+      <TripSettingsModal isOpen={settingsOpen} trip={trip} onClose={() => setSettingsOpen(false)} onSave={onUpdate} handleImg={handleImg} isProcessing={isProcessing} />
+      {gallery && <ImageViewer images={gallery.images} initialIndex={gallery.index} onClose={() => setGallery(null)} />}
 
-        <Modal isOpen={editOpen || !!editingItem} title={editingItem ? "編輯" : "新增"} onClose={()=>{setEditOpen(false); setEditingItem(null);}}>
-          <div className="space-y-3">
-             {((editingItem && isItineraryEdit) || (!editingItem && activeTab==='plan')) ? (
-               <>
-                 <div className="flex gap-2">
-                   <input type="time" className="border p-2 rounded w-1/3" value={editingItem?editingItem.time:newItem.time} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, time:v}):setNewItem({...newItem, time:v})}} />
-                   <select className="border p-2 rounded w-2/3" value={editingItem?editingItem.type:newItem.type} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, type:v}):setNewItem({...newItem, type:v})}}><option value="fun">🎡 景點</option><option value="food">🍜 美食</option><option value="shopping">🛍️ 購物</option><option value="transport">🚆 交通</option><option value="stay">🏨 住宿</option></select>
-                 </div>
-                 <input className="w-full border p-2 rounded" placeholder="名稱" value={editingItem?editingItem.activity:newItem.activity} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, activity:v}):setNewItem({...newItem, activity:v})}} />
-                 <LocationInput placeholder="地點" value={editingItem?editingItem.location:newItem.location} onChange={v=>editingItem?setEditingItem({...editingItem, location:v}):setNewItem({...newItem, location:v})} />
-                 <textarea className="w-full border p-2 rounded h-20" placeholder="備註 (支援網址與換行)" value={editingItem?editingItem.notes:newItem.notes} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, notes:v}):setNewItem({...newItem, notes:v})}} />
-               </>
-             ) : (
-               <>
-                 <div className="grid grid-cols-5 gap-2">{MOODS.map(m=><button key={m.k} onClick={()=>editingItem?setEditingItem({...editingItem, mood:m.k}):setNewMem({...newMem, mood:m.k})} className={`flex flex-col items-center p-1 rounded ${(editingItem?editingItem.mood:newMem.mood)===m.k?'bg-indigo-100 border-indigo-300 border':''}`}><span className="text-xl">{m.i}</span><span className="text-[10px]">{m.l}</span></button>)}</div>
-                 <div className="flex gap-2 items-center"><span className="text-xs">關聯:</span><select className="border p-2 rounded flex-1 text-sm" value={editingItem?editingItem.linkedId:newMem.linkedId} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, linkedId:v}):setNewMem({...newMem, linkedId:v})}}><option value="">-- 無 --</option>{dailyItems.map(i=><option key={i.id} value={i.id}>{i.time} {i.activity}</option>)}</select></div>
-                 <textarea className="w-full border p-2 rounded h-32" placeholder="回憶..." value={editingItem?editingItem.text:newMem.text} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, text:v}):setNewMem({...newMem, text:v})}} />
-               </>
-             )}
-             <div className="flex justify-between items-center border p-2 rounded"><span className="text-xs">圖片</span><button onClick={()=>fileRef.current.click()} className="text-sky-600 font-bold" disabled={isProcessing}><Icons.Plus/></button><input type="file" multiple hidden ref={fileRef} onChange={e=>handleImg(e, editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments), n=>{editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))})} /></div>
-             
-             {isProcessing && <div className="text-xs text-sky-600 flex items-center gap-1"><Icons.Loader size={12}/> 正在處理圖片...</div>}
-             
-             <div className="grid grid-cols-4 gap-2">{(editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments)).map((a,i)=><div key={i} className="relative h-16 bg-slate-100"><img src={a} className="w-full h-full object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(editingItem?editingItem:(activeTab==='plan'?newItem:newMem)), index:i})}}/>
-               <button onClick={()=>{const curr=editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments); const n=[...curr]; n.splice(i,1); editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))}} className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-0.5"><Icons.X size={10}/></button></div>)}</div>
-             <div className="flex gap-2">
-               {editingItem && <button onClick={()=>setDeleteModal({isOpen:true, id:editingItem.id, type:isItineraryEdit?'itinerary':'memories'})} className="flex-1 bg-red-100 text-red-600 py-2 rounded">刪除</button>}
-               <button onClick={()=>{ if(editingItem) handleItemAction(editingItem.activity?'itinerary':'memories', 'update', editingItem, editingItem.id); else { if(activeTab==='plan') handleItemAction('itinerary', 'add', {day, ...newItem, completed:false}); else { const n={...newMem, day, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}; handleItemAction('memories', 'add', n); setEditOpen(false); setNewMem({text:'',mood:'happy',attachments:[], linkedId: ''}); } } }} className="flex-1 bg-sky-600 text-white py-2 rounded font-bold" disabled={isProcessing}>{isProcessing ? '處理中...' : '儲存'}</button>
-             </div>
-          </div>
-        </Modal>
-
-        <header className={`relative text-white p-4 pt-8 shadow-md z-20 ${trip.coverImage?'h-40':'bg-sky-600'}`}>
-           {trip.coverImage && <><img src={trip.coverImage} className="absolute inset-0 w-full h-full object-cover"/><div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/80"></div></>}
-           <div className="relative z-10 h-full flex flex-col justify-between">
-             <div className="flex items-center gap-3">
-               <button onClick={onBack} className="p-1 hover:bg-white/20 rounded-full"><Icons.Plane className="transform rotate-180"/></button>
-               <div className="flex-1 min-w-0"><h1 className="text-xl font-bold truncate">{trip.name}</h1><p className="text-xs opacity-80">{trip.startDate} ~ {trip.endDate}</p></div>
-               
-               {/* 新增列印/匯出按鈕 */}
-               <button onClick={() => window.print()} className="p-2 hover:bg-white/20 rounded-full transition-colors" title="列印行程 / 匯出 PDF"><Icons.Printer/></button>
-               <button onClick={()=>{setSettingsData({name:trip.name, startDate:trip.startDate, endDate:trip.endDate, coverImage:trip.coverImage}); setSettingsOpen(true)}} className="p-2 hover:bg-white/20 rounded-full"><Icons.Settings/></button>
-             </div>
-             
-             <div className="flex justify-between items-end">
-               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">{Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? 'bg-white text-sky-600 scale-105 shadow' : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}</div>
-               <div className="pb-3 text-[10px] opacity-80 flex items-center gap-1 bg-black/20 px-2 py-1 rounded-full backdrop-blur-sm">
-                  {mode==='cloud' && isOnline ? <span className="flex items-center gap-1"><Icons.Cloud size={10}/> 雲端</span> : <span className="flex items-center gap-1"><Icons.Database size={10}/> 本地</span>}
+      {/* Edit/Add Modal */}
+      <Modal isOpen={editOpen || !!editingItem} title={editingItem ? "編輯" : "新增"} onClose={()=>{setEditOpen(false); setEditingItem(null);}}>
+        <div className="space-y-3">
+           {((editingItem && isItineraryEdit) || (!editingItem && activeTab==='plan')) ? (
+             <>
+               <div className="flex gap-2">
+                 <input type="time" className="border p-2 rounded w-1/3" value={editingItem?editingItem.time:newItem.time} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, time:v}):setNewItem({...newItem, time:v})}} />
+                 <select className="border p-2 rounded w-2/3" value={editingItem?editingItem.type:newItem.type} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, type:v}):setNewItem({...newItem, type:v})}}><option value="fun">🎡 景點</option><option value="food">🍜 美食</option><option value="shopping">🛍️ 購物</option><option value="transport">🚆 交通</option><option value="stay">🏨 住宿</option></select>
                </div>
+               <input className="w-full border p-2 rounded" placeholder="名稱" value={editingItem?editingItem.activity:newItem.activity} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, activity:v}):setNewItem({...newItem, activity:v})}} />
+               <LocationInput placeholder="地點" value={editingItem?editingItem.location:newItem.location} onChange={v=>editingItem?setEditingItem({...editingItem, location:v}):setNewItem({...newItem, location:v})} />
+               <textarea className="w-full border p-2 rounded h-20" placeholder="備註 (支援網址與換行)" value={editingItem?editingItem.notes:newItem.notes} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, notes:v}):setNewItem({...newItem, notes:v})}} />
+             </>
+           ) : (
+             <>
+               <div className="grid grid-cols-5 gap-2">{MOODS.map(m=><button key={m.k} onClick={()=>editingItem?setEditingItem({...editingItem, mood:m.k}):setNewMem({...newMem, mood:m.k})} className={`flex flex-col items-center p-1 rounded ${(editingItem?editingItem.mood:newMem.mood)===m.k?'bg-indigo-100 border-indigo-300 border':''}`}><span className="text-xl">{m.i}</span><span className="text-[10px]">{m.l}</span></button>)}</div>
+               <div className="flex gap-2 items-center"><span className="text-xs">關聯:</span><select className="border p-2 rounded flex-1 text-sm" value={editingItem?editingItem.linkedId:newMem.linkedId} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, linkedId:v}):setNewMem({...newMem, linkedId:v})}}><option value="">-- 無 --</option>{dailyItems.map(i=><option key={i.id} value={i.id}>{i.time} {i.activity}</option>)}</select></div>
+               <textarea className="w-full border p-2 rounded h-32" placeholder="回憶..." value={editingItem?editingItem.text:newMem.text} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, text:v}):setNewMem({...newMem, text:v})}} />
+             </>
+           )}
+           <div className="flex justify-between items-center border p-2 rounded"><span className="text-xs">圖片</span><button onClick={()=>fileRef.current.click()} className="text-sky-600 font-bold" disabled={isProcessing}><Icons.Plus/></button><input type="file" multiple hidden ref={fileRef} onChange={e=>handleImg(e, editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments), n=>{editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))})} /></div>
+           
+           {isProcessing && <div className="text-xs text-sky-600 flex items-center gap-1"><Icons.Loader size={12}/> 正在處理圖片...</div>}
+           
+           <div className="grid grid-cols-4 gap-2">{(editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments)).map((a,i)=><div key={i} className="relative h-16 bg-slate-100"><img src={a} className="w-full h-full object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(editingItem?editingItem:(activeTab==='plan'?newItem:newMem)), index:i})}}/>
+             <button onClick={()=>{const curr=editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments); const n=[...curr]; n.splice(i,1); editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))}} className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-0.5"><Icons.X size={10}/></button></div>)}</div>
+           <div className="flex gap-2">
+             {/* Delete Button inside Edit Modal */}
+             {editingItem && <button onClick={()=>setDeleteModal({isOpen:true, id:editingItem.id, type:isItineraryEdit?'itinerary':'memories'})} className="flex-1 bg-red-100 text-red-600 py-2 rounded">刪除</button>}
+             <button onClick={()=>{ if(editingItem) handleItemAction(editingItem.activity?'itinerary':'memories', 'update', editingItem, editingItem.id); else { if(activeTab==='plan') handleItemAction('itinerary', 'add', {day, ...newItem, completed:false}); else { const n={...newMem, day, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}; handleItemAction('memories', 'add', n); setEditOpen(false); setNewMem({text:'',mood:'happy',attachments:[], linkedId: ''}); } } }} className="flex-1 bg-sky-600 text-white py-2 rounded font-bold" disabled={isProcessing}>{isProcessing ? '處理中...' : '儲存'}</button>
+           </div>
+        </div>
+      </Modal>
+
+      <header className={`relative text-white p-4 pt-8 shadow-md z-20 print:hidden ${trip.coverImage?'h-40':'bg-sky-600'}`}>
+         {trip.coverImage && <><img src={trip.coverImage} className="absolute inset-0 w-full h-full object-cover"/><div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/80"></div></>}
+         <div className="relative z-10 h-full flex flex-col justify-between">
+           <div className="flex items-center gap-3">
+             <button onClick={onBack} className="p-1 hover:bg-white/20 rounded-full"><Icons.Plane className="transform rotate-180"/></button>
+             <div className="flex-1 min-w-0"><h1 className="text-xl font-bold truncate">{trip.name}</h1><p className="text-xs opacity-80">{trip.startDate} ~ {trip.endDate}</p></div>
+             
+             {/* 新增列印/匯出按鈕 */}
+             <button onClick={() => window.print()} className="p-2 hover:bg-white/20 rounded-full transition-colors" title="列印行程 / 匯出 PDF"><Icons.Printer/></button>
+             <button onClick={()=>{setSettingsOpen(true)}} className="p-2 hover:bg-white/20 rounded-full"><Icons.Settings/></button>
+           </div>
+           
+           <div className="flex justify-between items-end">
+             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">{Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? 'bg-white text-sky-600 scale-105 shadow' : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}</div>
+             
+             {/* 離線/雲端狀態指示燈 (在內頁顯示) */}
+             <div className="pb-3 text-[10px] opacity-80 flex items-center gap-1 bg-black/20 px-2 py-1 rounded-full backdrop-blur-sm">
+                {mode==='cloud' && isOnline ? <span className="flex items-center gap-1"><Icons.Cloud size={10}/> 雲端</span> : <span className="flex items-center gap-1"><Icons.Database size={10}/> 本地</span>}
              </div>
            </div>
-        </header>
+         </div>
+      </header>
 
-        <main className="pb-24 px-4 pt-4 flex-1 overflow-y-auto">
-          {activeTab === 'plan' ? (
-            <div className="space-y-1">
-              <div className="flex justify-between items-center mb-4"><h2 className="text-lg font-bold text-slate-700 flex items-center gap-2"><Icons.Calendar/> <span>Day {day}</span><span className="text-xs bg-slate-100 px-2 rounded-full text-slate-500">{getDisplayD()}</span></h2>
-              <div className="flex gap-2">
-                {dailyItems.length > 0 && <button onClick={()=>setDeleteModal({isOpen:true, type:'batch_day'})} className="text-red-500 bg-white border border-red-100 p-2 rounded-full shadow-sm"><Icons.Trash/></button>}
-                <button onClick={()=>setImportOpen(true)} className="text-sky-600 bg-white border border-sky-100 p-2 rounded-full"><Icons.FileText/></button>
-                <button onClick={()=>{if(!isOnline){alert("離線模式無法新增行程");return;} setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[]}); setEditOpen(true)}} className={`p-2 rounded-full shadow-md ${!isOnline ? 'bg-slate-400 cursor-not-allowed' : 'bg-sky-600 text-white'}`}><Icons.Plus/></button>
-              </div>
-              </div>
-              
-              <div className="relative">
-                 {dailyItems.length === 0 && <div className="text-center text-slate-300 py-10 text-sm">點擊 + 新增第一個行程</div>}
-                 {dailyItems.map((item, idx) => {
-                    const style = TYPE_STYLES[item.type] || TYPE_STYLES.default;
-                    const isLast = idx === dailyItems.length - 1;
+      <main className="pb-24 px-4 pt-4 print:hidden">
+        {activeTab === 'plan' ? (
+          <div className="space-y-1"> {/* 減少垂直間距，由 Flex 佈局控制 */}
+            <div className="flex justify-between items-center mb-4"><h2 className="text-lg font-bold text-slate-700 flex items-center gap-2"><Icons.Calendar/> <span>Day {day}</span><span className="text-xs bg-slate-100 px-2 rounded-full text-slate-500">{getDisplayD()}</span></h2>
+            <div className="flex gap-2">
+              {dailyItems.length > 0 && <button onClick={()=>setDeleteModal({isOpen:true, type:'batch_day'})} className="text-red-500 bg-white border border-red-100 p-2 rounded-full shadow-sm"><Icons.Trash/></button>}
+              <button onClick={()=>setImportOpen(true)} className="text-sky-600 bg-white border border-sky-100 p-2 rounded-full"><Icons.FileText/></button>
+              {/* 離線時停用新增按鈕，避免衝突 */}
+              <button onClick={()=>{if(!isOnline){alert("離線模式無法新增行程");return;} setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[]}); setEditOpen(true)}} className={`p-2 rounded-full shadow-md ${!isOnline ? 'bg-slate-400 cursor-not-allowed' : 'bg-sky-600 text-white'}`}><Icons.Plus/></button>
+            </div>
+            </div>
+            
+            {/* Timeline View Container */}
+            <div className="relative">
+               {dailyItems.length === 0 && <div className="text-center text-slate-300 py-10 text-sm">點擊 + 新增第一個行程</div>}
+               {dailyItems.map((item, idx) => {
+                  const style = TYPE_STYLES[item.type] || TYPE_STYLES.default;
+                  const isLast = idx === dailyItems.length - 1;
 
-                    return (
-                      <div key={item.id} className="flex relative">
-                        <div className="w-14 flex-shrink-0 flex flex-col items-end pr-3 pt-5 relative">
-                          <span className={`text-xs font-bold font-mono ${style.text}`}>{item.time}</span>
-                        </div>
-                        <div className="relative flex flex-col items-center w-6 flex-shrink-0">
-                          <div className={`w-0.5 flex-1 ${style.line} ${isLast ? 'bg-gradient-to-b from-current to-transparent max-h-full' : ''}`} style={{ minHeight: '60px' }}></div>
-                          <div className={`absolute top-5 w-3 h-3 rounded-full border-2 border-white shadow-sm z-10 ${style.dot}`}></div>
-                        </div>
-                        <div className="flex-1 pb-4 pl-2 min-w-0">
-                          <SwipeableRow onDeleteRequest={()=>setDeleteModal({isOpen:true, id:item.id, type:'itinerary'})} onEdit={()=>setEditingItem(item)}>
-                             <div className={`p-3 rounded-xl border relative shadow-sm transition-all active:scale-[0.98] ${style.bg} ${style.border} ${item.completed ? 'opacity-60 grayscale' : ''}`}>
-                               <div className="flex justify-between items-start">
-                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1 mb-1">
-                                      <h3 className={`font-bold text-base truncate ${item.completed ? 'line-through text-slate-500' : 'text-slate-800'}`}>{item.activity}</h3>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-xs opacity-70 mb-1">
-                                       <span className="flex items-center gap-0.5">{typeIcon(item.type)} {item.type.toUpperCase()}</span>
-                                       {item.location && <span className="flex items-center gap-0.5 truncate"><Icons.MapPin size={10}/> {item.location}</span>}
-                                    </div>
-                                    {(item.notes || safeAtt(item).length>0) && <div className="mt-2 bg-white/60 p-2 rounded text-sm text-slate-600 border border-black/5 whitespace-pre-wrap">{renderTextWithLinks(item.notes)}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(item), index:i})}}/>)}</div>}</div>}
-                                 </div>
-                                 <div className="flex flex-col gap-3 ml-2">
-                                   <button onClick={(e)=>{e.stopPropagation(); handleItemAction('itinerary', 'update', {completed:!item.completed}, item.id)}} className={`${item.completed?'text-emerald-500':'text-slate-300'} hover:text-emerald-500`}><Icons.Check size={18}/></button>
-                                   <div className="flex flex-col gap-1">
-                                     <button onClick={(e)=>{e.stopPropagation(); handleMove(idx, -1)}} className="text-slate-300 hover:text-sky-500"><Icons.ArrowUp size={14}/></button>
-                                     <button onClick={(e)=>{e.stopPropagation(); handleMove(idx, 1)}} className="text-slate-300 hover:text-sky-500"><Icons.ArrowDown size={14}/></button>
-                                   </div>
+                  return (
+                    <div key={item.id} className="flex relative">
+                      {/* Left: Time */}
+                      <div className="w-14 flex-shrink-0 flex flex-col items-end pr-3 pt-5 relative">
+                        <span className={`text-xs font-bold font-mono ${style.text}`}>{item.time}</span>
+                      </div>
+
+                      {/* Middle: Line & Dot */}
+                      <div className="relative flex flex-col items-center w-6 flex-shrink-0">
+                        {/* Vertical Line */}
+                        <div className={`w-0.5 flex-1 ${style.line} ${isLast ? 'bg-gradient-to-b from-current to-transparent max-h-full' : ''}`} style={{ minHeight: '60px' }}></div>
+                        {/* Dot */}
+                        <div className={`absolute top-5 w-3 h-3 rounded-full border-2 border-white shadow-sm z-10 ${style.dot}`}></div>
+                      </div>
+
+                      {/* Right: Content Card (Swipeable) */}
+                      <div className="flex-1 pb-4 pl-2 min-w-0">
+                        <SwipeableRow 
+                          className="" 
+                          onDeleteRequest={()=>setDeleteModal({isOpen:true, id:item.id, type:'itinerary'})} 
+                          onEdit={()=>setEditingItem(item)}
+                        >
+                           <div className={`p-3 rounded-xl border relative shadow-sm transition-all active:scale-[0.98] ${style.bg} ${style.border} ${item.completed ? 'opacity-60 grayscale' : ''}`}>
+                             <div className="flex justify-between items-start">
+                               <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <h3 className={`font-bold text-base truncate ${item.completed ? 'line-through text-slate-500' : 'text-slate-800'}`}>{item.activity}</h3>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs opacity-70 mb-1">
+                                     <span className="flex items-center gap-0.5">{typeIcon(item.type)} {item.type.toUpperCase()}</span>
+                                     {item.location && <span className="flex items-center gap-0.5 truncate"><Icons.MapPin size={10}/> {item.location}</span>}
+                                  </div>
+                                  
+                                  {(item.notes || safeAtt(item).length>0) && <div className="mt-2 bg-white/60 p-2 rounded text-sm text-slate-600 border border-black/5 whitespace-pre-wrap">{renderTextWithLinks(item.notes)}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(item), index:i})}}/>)}</div>}</div>}
+                               </div>
+                               
+                               {/* Controls */}
+                               <div className="flex flex-col gap-3 ml-2">
+                                 <button onClick={(e)=>{e.stopPropagation(); handleItemAction('itinerary', 'update', {completed:!item.completed}, item.id)}} className={`${item.completed?'text-emerald-500':'text-slate-300'} hover:text-emerald-500`}><Icons.Check size={18}/></button>
+                                 <div className="flex flex-col gap-1">
+                                   <button onClick={(e)=>{e.stopPropagation(); handleMove(idx, -1)}} className="text-slate-300 hover:text-sky-500"><Icons.ArrowUp size={14}/></button>
+                                   <button onClick={(e)=>{e.stopPropagation(); handleMove(idx, 1)}} className="text-slate-300 hover:text-sky-500"><Icons.ArrowDown size={14}/></button>
                                  </div>
                                </div>
                              </div>
-                          </SwipeableRow>
-                        </div>
+                           </div>
+                        </SwipeableRow>
                       </div>
-                    );
-                 })}
-              </div>
+                    </div>
+                  );
+               })}
             </div>
-          ) : (
-            <div className="space-y-4">
-              <button onClick={()=>{if(!isOnline){alert("離線模式無法新增回憶");return;} setNewMem({text:'', mood:'happy', attachments:[], linkedId:''}); setEditOpen(true);}} className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 ${!isOnline?'bg-slate-200 text-slate-400 cursor-not-allowed':'bg-indigo-100 text-indigo-600'}`}><Icons.Camera/> 新增回憶</button>
-              {dailyMemories.map(m=>{
-                 const linked = dailyItems.find(i=>i.id===m.linkedId);
-                 const moodData = MOODS.find(x=>x.k===m.mood) || MOODS[0];
-                 return (
-                   <SwipeableRow key={m.id} onDeleteRequest={()=>setDeleteModal({isOpen:true, id:m.id, type:'memories'})} onEdit={()=>setEditingItem(m)} className="mb-4">
-                      <div className="p-3 relative bg-white border border-slate-100 shadow-sm rounded-xl">
-                        <div className="absolute top-2 right-2 text-slate-300"><Icons.Settings/></div>
-                        {safeAtt(m).length>0 && <div className="flex gap-1 mb-2">{safeAtt(m).map((a,i)=><img key={i} src={a} className="h-20 w-full object-cover rounded bg-slate-100 cursor-pointer hover:opacity-80" onClick={e=>{e.stopPropagation();setGallery({images:safeAtt(m), index:i})}}/>)}</div>}
-                        {linked && <div className="text-xs text-sky-600 bg-sky-50 inline-block px-1 rounded mb-1"><Icons.MapPin/> 於 {linked.activity}</div>}
-                        <p className="text-sm text-slate-800 whitespace-pre-wrap">{m.text}</p>
-                        <div className="mt-2 pt-2 border-t flex justify-between text-xs text-slate-400"><span>{m.time}</span><span title={moodData.l}>{moodData.i}</span></div>
-                      </div>
-                   </SwipeableRow>
-                 );
-              })}
-            </div>
-          )}
-        </main>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <button onClick={()=>{if(!isOnline){alert("離線模式無法新增回憶");return;} setNewMem({text:'', mood:'happy', attachments:[], linkedId:''}); setEditOpen(true);}} className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 ${!isOnline?'bg-slate-200 text-slate-400 cursor-not-allowed':'bg-indigo-100 text-indigo-600'}`}><Icons.Camera/> 新增回憶</button>
+            {dailyMemories.map(m=>{
+               const linked = dailyItems.find(i=>i.id===m.linkedId);
+               const moodData = MOODS.find(x=>x.k===m.mood) || MOODS[0];
+               return (
+                 <SwipeableRow key={m.id} onDeleteRequest={()=>setDeleteModal({isOpen:true, id:m.id, type:'memories'})} onEdit={()=>setEditingItem(m)} className="mb-4">
+                    <div className="p-3 relative bg-white border border-slate-100 shadow-sm rounded-xl">
+                      <div className="absolute top-2 right-2 text-slate-300"><Icons.Settings/></div>
+                      {safeAtt(m).length>0 && <div className="flex gap-1 mb-2">{safeAtt(m).map((a,i)=><img key={i} src={a} className="h-20 w-full object-cover rounded bg-slate-100 cursor-pointer hover:opacity-80" onClick={e=>{e.stopPropagation();setGallery({images:safeAtt(m), index:i})}}/>)}</div>}
+                      {linked && <div className="text-xs text-sky-600 bg-sky-50 inline-block px-1 rounded mb-1"><Icons.MapPin/> 於 {linked.activity}</div>}
+                      <p className="text-sm text-slate-800 whitespace-pre-wrap">{m.text}</p>
+                      <div className="mt-2 pt-2 border-t flex justify-between text-xs text-slate-400"><span>{m.time}</span><span title={moodData.l}>{moodData.i}</span></div>
+                    </div>
+                 </SwipeableRow>
+               );
+            })}
+          </div>
+        )}
+      </main>
 
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-30 max-w-md mx-auto">
-           <button onClick={()=>setActiveTab('plan')} className={`flex flex-col items-center gap-1 ${activeTab==='plan'?'text-sky-600':'text-slate-300'}`}><Icons.Calendar/><span className="text-[10px] font-bold">行程</span></button>
-           <button onClick={()=>setActiveTab('record')} className={`flex flex-col items-center gap-1 ${activeTab==='record'?'text-indigo-600':'text-slate-300'}`}><Icons.Camera/><span className="text-[10px] font-bold">回憶</span></button>
-        </nav>
-      </div>
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-30 max-w-md mx-auto print:hidden">
+         <button onClick={()=>setActiveTab('plan')} className={`flex flex-col items-center gap-1 ${activeTab==='plan'?'text-sky-600':'text-slate-300'}`}><Icons.Calendar/><span className="text-[10px] font-bold">行程</span></button>
+         <button onClick={()=>setActiveTab('record')} className={`flex flex-col items-center gap-1 ${activeTab==='record'?'text-indigo-600':'text-slate-300'}`}><Icons.Camera/><span className="text-[10px] font-bold">回憶</span></button>
+      </nav>
 
-      {/* --- 隱藏的列印排版區區塊 (PDF 匯出用) --- */}
-      {/* 只有在觸發列印時才會顯示這個區塊，並且覆蓋整個畫面 */}
+      {/* --- 隱藏的列印排版區塊 (PDF 匯出用) --- */}
       <div className="hidden print:block w-full bg-white text-black font-sans p-8 print:m-0 print:p-0">
         <div className="text-center mb-8 border-b-4 border-slate-800 pb-4">
           <h1 className="text-4xl font-bold mb-2">{trip.name} - 行程總覽</h1>
@@ -848,8 +868,7 @@ function AppContent() {
   if (!loaded) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading...</div>;
 
   return (
-    // FIX: 加上針對 print 的重置樣式，允許列印時跨出 max-w-md 並隱藏陰影
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 max-w-md mx-auto shadow-2xl overflow-hidden border-x border-slate-200 relative print:max-w-none print:w-full print:overflow-visible print:shadow-none print:border-none print:bg-white print:p-0 print:m-0">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 max-w-md mx-auto shadow-2xl overflow-x-hidden border-x border-slate-200 relative print:max-w-none print:w-full print:overflow-visible print:shadow-none print:border-none print:bg-white print:p-0 print:m-0">
       <button onClick={()=>{if(confirm('重置所有資料?')){localStorage.clear(); window.location.reload();}}} className="fixed bottom-1 left-1 z-50 p-2 text-slate-300 hover:text-red-500 opacity-50 hidden print:hidden"><Icons.Refresh size={12}/></button>
 
       {activeTrip ? (
