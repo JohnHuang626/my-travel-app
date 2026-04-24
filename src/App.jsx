@@ -489,11 +489,15 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
         <div className="space-y-3">
           {trips.length===0 && !isCreating && <div className="text-center text-slate-400 py-8">暫無行程</div>}
           {trips.map(t => (
-            <div key={t.id} onClick={() => onSelect(t.id)} className="relative bg-white rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer hover:shadow-md h-24 overflow-hidden">
+            <div key={t.id} onClick={() => onSelect(t.id)} className="relative bg-white rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer hover:shadow-md h-auto min-h-[6rem] overflow-hidden py-2">
                {t.coverImage ? <><img src={t.coverImage} className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div></> : <div className="absolute inset-0 bg-gradient-to-r from-sky-50 to-white"></div>}
                <div className="relative z-10 flex items-center gap-4 w-full p-4">
                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0 ${t.coverImage?'bg-white/20 backdrop-blur text-white':'bg-sky-100 text-slate-700'}`}><Icons.Plane/></div>
-                 <div className="flex-1 min-w-0"><h3 className={`font-bold text-lg truncate ${t.coverImage?'text-white':'text-slate-800'}`}>{t.name}</h3><p className={`text-xs ${t.coverImage?'text-white/80':'text-slate-400'}`}>{t.startDate} ~ {t.endDate}</p></div>
+                 {/* 在這裡動態切換：如果名稱大於 6 個字，則縮小字體並允許換行 */}
+                 <div className="flex-1 min-w-0">
+                    <h3 className={`font-bold ${t.name.length > 6 ? 'text-base whitespace-normal break-words line-clamp-2' : 'text-lg truncate'} ${t.coverImage?'text-white':'text-slate-800'}`}>{t.name}</h3>
+                    <p className={`text-xs mt-1 ${t.coverImage?'text-white/80':'text-slate-400'}`}>{t.startDate} ~ {t.endDate}</p>
+                 </div>
                  <button onClick={e=>{e.stopPropagation(); setDeleteModal(t.id)}} className={`p-2 rounded-full ${t.coverImage?'text-white/80 hover:text-red-300':'text-slate-300 hover:text-red-500'}`}><Icons.Trash size={18}/></button>
                </div>
             </div>
@@ -605,7 +609,6 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
 
   return (
     <>
-      {/* 行動裝置/電腦版的正常畫面，列印時隱藏 */}
       <ConfirmModal 
         isOpen={deleteModal.isOpen} 
         title={deleteModal.type === 'batch_day' ? "清空當日行程" : "確認刪除"} 
@@ -662,19 +665,27 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
          {trip.coverImage && <><img src={trip.coverImage} className="absolute inset-0 w-full h-full object-cover"/><div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/80"></div></>}
          <div className="relative z-10 h-full flex flex-col justify-between">
            <div className="flex items-center gap-3">
-             <button onClick={onBack} className="p-1 hover:bg-white/20 rounded-full"><Icons.Plane className="transform rotate-180"/></button>
-             <div className="flex-1 min-w-0"><h1 className="text-xl font-bold truncate">{trip.name}</h1><p className="text-xs opacity-80">{trip.startDate} ~ {trip.endDate}</p></div>
+             <button onClick={onBack} className="p-1 hover:bg-white/20 rounded-full shrink-0"><Icons.Plane className="transform rotate-180"/></button>
              
-             {/* 新增列印/匯出按鈕 */}
-             <button onClick={() => window.print()} className="p-2 hover:bg-white/20 rounded-full transition-colors" title="列印行程 / 匯出 PDF"><Icons.Printer/></button>
-             <button onClick={()=>{setSettingsOpen(true)}} className="p-2 hover:bg-white/20 rounded-full"><Icons.Settings/></button>
+             {/* 在這裡動態切換：如果名稱大於 6 個字，則縮小字體並允許換行 */}
+             <div className="flex-1 min-w-0">
+               <h1 className={`font-bold ${trip.name.length > 6 ? 'text-lg whitespace-normal break-words line-clamp-2 leading-snug' : 'text-xl truncate'}`}>
+                 {trip.name}
+               </h1>
+               <p className="text-xs opacity-80 mt-1">{trip.startDate} ~ {trip.endDate}</p>
+             </div>
+             
+             <div className="flex items-center shrink-0">
+               <button onClick={() => window.print()} className="p-2 hover:bg-white/20 rounded-full transition-colors" title="列印行程 / 匯出 PDF"><Icons.Printer/></button>
+               <button onClick={()=>{setSettingsOpen(true)}} className="p-2 hover:bg-white/20 rounded-full"><Icons.Settings/></button>
+             </div>
            </div>
            
-           <div className="flex justify-between items-end">
+           <div className="flex justify-between items-end mt-2">
              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">{Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? 'bg-white text-sky-600 scale-105 shadow' : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}</div>
              
-             {/* 離線/雲端狀態指示燈 (在內頁顯示) */}
-             <div className="pb-3 text-[10px] opacity-80 flex items-center gap-1 bg-black/20 px-2 py-1 rounded-full backdrop-blur-sm">
+             {/* 離線/雲端狀態指示燈 */}
+             <div className="pb-3 text-[10px] opacity-80 flex items-center gap-1 bg-black/20 px-2 py-1 rounded-full backdrop-blur-sm shrink-0 whitespace-nowrap ml-2">
                 {mode==='cloud' && isOnline ? <span className="flex items-center gap-1"><Icons.Cloud size={10}/> 雲端</span> : <span className="flex items-center gap-1"><Icons.Database size={10}/> 本地</span>}
              </div>
            </div>
