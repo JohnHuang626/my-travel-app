@@ -58,7 +58,9 @@ const Icons = {
   Loader: (p) => <SvgIcon {...p} className={`animate-spin ${p.className||''}`}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></SvgIcon>,
   LogOut: (p) => <SvgIcon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></SvgIcon>,
   Database: (p) => <SvgIcon {...p}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></SvgIcon>,
-  Printer: (p) => <SvgIcon {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></SvgIcon>
+  Printer: (p) => <SvgIcon {...p}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></SvgIcon>,
+  Upload: (p) => <SvgIcon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></SvgIcon>,
+  Download: (p) => <SvgIcon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></SvgIcon>
 };
 
 // ==========================================
@@ -112,6 +114,20 @@ const LocalDB = {
         req.onerror = () => reject(req.error);
       });
     } catch (e) { console.error("LocalDB Read Failed:", e); return []; }
+  },
+
+  getAllKeys: async () => {
+    try {
+      const db = await LocalDB.init();
+      if (!db) return [];
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('backup', 'readonly');
+        const store = tx.objectStore('backup');
+        const req = store.getAllKeys();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) { return []; }
   },
 
   clear: async () => {
@@ -209,6 +225,25 @@ const Service = {
     }
   },
 
+  exportAll: async () => {
+    const keys = await LocalDB.getAllKeys();
+    const exportData = {};
+    for (const key of keys) {
+      exportData[key] = await LocalDB.get(key);
+    }
+    return JSON.stringify(exportData);
+  },
+
+  importAll: async (jsonStr) => {
+    try {
+      const data = JSON.parse(jsonStr);
+      for (const key in data) {
+        await LocalDB.set(key, data[key]);
+      }
+      return true;
+    } catch (e) { console.error(e); return false; }
+  },
+
   logout: async () => {
     try { if (Service.auth) await signOut(Service.auth); await LocalDB.clear(); localStorage.clear(); window.location.reload(); } 
     catch (e) { window.location.reload(); }
@@ -239,6 +274,76 @@ const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel }) => {
         <div className="flex gap-3"><button onClick={onCancel} className="flex-1 py-2 bg-slate-100 rounded text-sm">取消</button><button onClick={onConfirm} className="flex-1 py-2 bg-red-500 text-white rounded text-sm">確定</button></div>
       </div>
     </div>
+  );
+};
+
+const DataToolsModal = ({ isOpen, onClose }) => {
+  const [status, setStatus] = useState('');
+  const [exportData, setExportData] = useState('');
+  
+  useEffect(() => {
+    if (isOpen) { setStatus(''); setExportData(''); }
+  }, [isOpen]);
+  
+  const handleExport = async () => {
+    setStatus('正在打包資料... (請稍候)');
+    setExportData('');
+    setTimeout(async () => {
+        try {
+            const dataStr = await Service.exportAll();
+            if (dataStr === '{}' || dataStr === '[]') { setStatus('沒有可匯出的資料 (本地資料庫為空)'); return; }
+            setExportData(dataStr);
+            const textArea = document.createElement("textarea");
+            textArea.value = dataStr;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+              const successful = document.execCommand('copy');
+              if(successful) setStatus('✅ 備份代碼已複製！若貼上失敗，請手動複製下方文字。');
+              else setStatus('⚠️ 自動複製失敗，請手動複製下方文字。');
+            } catch (err) { setStatus('⚠️ 自動複製失敗，請手動複製下方文字。'); }
+            document.body.removeChild(textArea);
+        } catch (e) { setStatus('❌ 匯出錯誤: ' + e.message); }
+    }, 100);
+  };
+
+  const handleImport = async () => {
+    const str = prompt("請貼上備份代碼：");
+    if (!str) return;
+    setStatus('正在匯入...');
+    setTimeout(async () => {
+        const success = await Service.importAll(str);
+        if (success) { alert("匯入成功！即將重新整理..."); window.location.reload(); } 
+        else { setStatus('❌ 匯入失敗，格式錯誤'); }
+    }, 100);
+  };
+
+  if (!isOpen) return null;
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="資料管理中心">
+      <div className="space-y-4">
+        <div className="bg-blue-50 p-3 rounded text-xs text-blue-700">
+          <p className="font-bold mb-1">💡 為什麼需要這個？</p>
+          <p>如果在 iPhone 桌面模式發現資料遺失，您可以使用此功能手動搬移資料。</p>
+        </div>
+        <button onClick={handleExport} className="w-full py-3 bg-slate-100 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-200">
+          <Icons.Upload size={18} /> 匯出備份 (產生代碼)
+        </button>
+        {exportData && (
+            <div className="animate-in fade-in slide-in-from-top-2">
+                <label className="text-xs text-slate-500 block mb-1">備份代碼 (請全選複製)：</label>
+                <textarea className="w-full h-32 border p-2 rounded bg-slate-50 text-[10px] font-mono break-all focus:ring-2 focus:ring-sky-500 outline-none" value={exportData} readOnly onClick={(e) => e.target.select()} />
+            </div>
+        )}
+        <button onClick={handleImport} className="w-full py-3 bg-slate-100 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-200">
+          <Icons.Download size={18} /> 匯入備份 (貼上代碼)
+        </button>
+        <button onClick={()=>{if(confirm("確定清除所有資料與登出？")) Service.logout()}} className="w-full py-3 bg-red-50 text-red-600 rounded-lg flex items-center justify-center gap-2 hover:bg-red-100 mt-6 border border-red-100">
+          <Icons.LogOut size={18} /> 清除資料並登出
+        </button>
+        {status && <div className="text-center text-sm font-bold text-emerald-600 animate-pulse">{status}</div>}
+      </div>
+    </Modal>
   );
 };
 
@@ -430,6 +535,7 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
   const [newTrip, setNewTrip] = useState({ name: '', startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] });
   const [deleteModal, setDeleteModal] = useState(false);
   const [logoutModal, setLogoutModal] = useState(false);
+  const [dataToolsModal, setDataToolsModal] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -459,6 +565,8 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
         onConfirm={() => Service.logout()} 
         onCancel={() => setLogoutModal(false)} 
       />
+      
+      <DataToolsModal isOpen={dataToolsModal} onClose={() => setDataToolsModal(false)} />
 
       <header className={`text-white p-6 pt-10 shadow-md rounded-b-3xl mb-6 flex justify-between items-start ${mode==='cloud' && isOnline ?'bg-sky-600':'bg-slate-600'}`}>
         <div>
@@ -489,21 +597,27 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
         <div className="space-y-3">
           {trips.length===0 && !isCreating && <div className="text-center text-slate-400 py-8">暫無行程</div>}
           {trips.map(t => (
+            // FIX: 加入 py-2 和 min-h-[6rem] 來適應多行文字
             <div key={t.id} onClick={() => onSelect(t.id)} className="relative bg-white rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer hover:shadow-md h-auto min-h-[6rem] overflow-hidden py-2">
                {t.coverImage ? <><img src={t.coverImage} className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div></> : <div className="absolute inset-0 bg-gradient-to-r from-sky-50 to-white"></div>}
                <div className="relative z-10 flex items-center gap-4 w-full p-4">
                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0 ${t.coverImage?'bg-white/20 backdrop-blur text-white':'bg-sky-100 text-slate-700'}`}><Icons.Plane/></div>
-                 {/* 在這裡動態切換：如果名稱大於 6 個字，則縮小字體並允許換行 */}
+                 {/* FIX: 長名稱自動縮小並換行顯示 (最多兩行) */}
                  <div className="flex-1 min-w-0">
-                    <h3 className={`font-bold ${t.name.length > 6 ? 'text-base whitespace-normal break-words line-clamp-2' : 'text-lg truncate'} ${t.coverImage?'text-white':'text-slate-800'}`}>{t.name}</h3>
+                    <h3 className={`font-bold ${t.name.length > 6 ? 'text-base whitespace-normal break-words line-clamp-2 leading-tight' : 'text-lg truncate'} ${t.coverImage?'text-white':'text-slate-800'}`}>{t.name}</h3>
                     <p className={`text-xs mt-1 ${t.coverImage?'text-white/80':'text-slate-400'}`}>{t.startDate} ~ {t.endDate}</p>
                  </div>
-                 <button onClick={e=>{e.stopPropagation(); setDeleteModal(t.id)}} className={`p-2 rounded-full ${t.coverImage?'text-white/80 hover:text-red-300':'text-slate-300 hover:text-red-500'}`}><Icons.Trash size={18}/></button>
+                 <button onClick={e=>{e.stopPropagation(); setDeleteModal(t.id)}} className={`p-2 rounded-full ${t.coverImage?'text-white/80 hover:text-red-300':'text-slate-300 hover:text-red-500'} shrink-0`}><Icons.Trash size={18}/></button>
                </div>
             </div>
           ))}
         </div>
       </div>
+      
+      {/* 隱藏的資料管理按鈕 */}
+      <button onClick={() => setDataToolsModal(true)} className="fixed bottom-4 left-4 z-50 p-3 bg-white text-slate-600 shadow-lg rounded-full border border-slate-200 hover:text-sky-600 hover:border-sky-200 transition-colors">
+        <Icons.Database size={20}/>
+      </button>
     </div>
   );
 }
@@ -538,7 +652,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
   const [newItem, setNewItem] = useState({ time: '', activity: '', location: '', type: 'fun', notes: '', attachments: [] });
   const [newMem, setNewMem] = useState({ text: '', mood: 'happy', attachments: [], linkedId: '' });
   const [importText, setImportText] = useState('');
-  
+
   const fileRef = useRef(null);
   
   const [items, setItems] = useState([]);
@@ -614,11 +728,8 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
         title={deleteModal.type === 'batch_day' ? "清空當日行程" : "確認刪除"} 
         message={deleteModal.type === 'batch_day' ? `確定要刪除 Day ${day} 的所有行程嗎？` : "確定要刪除這個項目嗎？"}
         onConfirm={() => { 
-          if (deleteModal.type === 'batch_day') {
-             performBatchDelete();
-          } else {
-             handleItemAction(deleteModal.type, 'delete', null, deleteModal.id); 
-          }
+          if (deleteModal.type === 'batch_day') performBatchDelete();
+          else handleItemAction(deleteModal.type, 'delete', null, deleteModal.id); 
           setDeleteModal({ isOpen: false }); 
         }} 
         onCancel={() => setDeleteModal({ isOpen: false })} 
@@ -627,7 +738,6 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
       <TripSettingsModal isOpen={settingsOpen} trip={trip} onClose={() => setSettingsOpen(false)} onSave={onUpdate} handleImg={handleImg} isProcessing={isProcessing} />
       {gallery && <ImageViewer images={gallery.images} initialIndex={gallery.index} onClose={() => setGallery(null)} />}
 
-      {/* Edit/Add Modal */}
       <Modal isOpen={editOpen || !!editingItem} title={editingItem ? "編輯" : "新增"} onClose={()=>{setEditOpen(false); setEditingItem(null);}}>
         <div className="space-y-3">
            {((editingItem && isItineraryEdit) || (!editingItem && activeTab==='plan')) ? (
@@ -654,7 +764,6 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
            <div className="grid grid-cols-4 gap-2">{(editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments)).map((a,i)=><div key={i} className="relative h-16 bg-slate-100"><img src={a} className="w-full h-full object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(editingItem?editingItem:(activeTab==='plan'?newItem:newMem)), index:i})}}/>
              <button onClick={()=>{const curr=editingItem?safeAtt(editingItem):(activeTab==='plan'?newItem.attachments:newMem.attachments); const n=[...curr]; n.splice(i,1); editingItem?setEditingItem({...editingItem, attachments:n}):(activeTab==='plan'?setNewItem({...newItem, attachments:n}):setNewMem({...newMem, attachments:n}))}} className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-0.5"><Icons.X size={10}/></button></div>)}</div>
            <div className="flex gap-2">
-             {/* Delete Button inside Edit Modal */}
              {editingItem && <button onClick={()=>setDeleteModal({isOpen:true, id:editingItem.id, type:isItineraryEdit?'itinerary':'memories'})} className="flex-1 bg-red-100 text-red-600 py-2 rounded">刪除</button>}
              <button onClick={()=>{ if(editingItem) handleItemAction(editingItem.activity?'itinerary':'memories', 'update', editingItem, editingItem.id); else { if(activeTab==='plan') handleItemAction('itinerary', 'add', {day, ...newItem, completed:false}); else { const n={...newMem, day, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}; handleItemAction('memories', 'add', n); setEditOpen(false); setNewMem({text:'',mood:'happy',attachments:[], linkedId: ''}); } } }} className="flex-1 bg-sky-600 text-white py-2 rounded font-bold" disabled={isProcessing}>{isProcessing ? '處理中...' : '儲存'}</button>
            </div>
@@ -666,16 +775,16 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
          <div className="relative z-10 h-full flex flex-col justify-between">
            <div className="flex items-center gap-3">
              <button onClick={onBack} className="p-1 hover:bg-white/20 rounded-full shrink-0"><Icons.Plane className="transform rotate-180"/></button>
-             
-             {/* 在這裡動態切換：如果名稱大於 6 個字，則縮小字體並允許換行 */}
+             {/* FIX: 行程內頁的標題也支援換行 */}
              <div className="flex-1 min-w-0">
-               <h1 className={`font-bold ${trip.name.length > 6 ? 'text-lg whitespace-normal break-words line-clamp-2 leading-snug' : 'text-xl truncate'}`}>
-                 {trip.name}
-               </h1>
-               <p className="text-xs opacity-80 mt-1">{trip.startDate} ~ {trip.endDate}</p>
+                <h1 className={`font-bold ${trip.name.length > 6 ? 'text-lg whitespace-normal break-words line-clamp-2 leading-snug' : 'text-xl truncate'}`}>
+                  {trip.name}
+                </h1>
+                <p className="text-xs opacity-80 mt-1">{trip.startDate} ~ {trip.endDate}</p>
              </div>
              
              <div className="flex items-center shrink-0">
+               {/* 匯出 PDF/列印按鈕 */}
                <button onClick={() => window.print()} className="p-2 hover:bg-white/20 rounded-full transition-colors" title="列印行程 / 匯出 PDF"><Icons.Printer/></button>
                <button onClick={()=>{setSettingsOpen(true)}} className="p-2 hover:bg-white/20 rounded-full"><Icons.Settings/></button>
              </div>
@@ -684,7 +793,6 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
            <div className="flex justify-between items-end mt-2">
              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">{Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? 'bg-white text-sky-600 scale-105 shadow' : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}</div>
              
-             {/* 離線/雲端狀態指示燈 */}
              <div className="pb-3 text-[10px] opacity-80 flex items-center gap-1 bg-black/20 px-2 py-1 rounded-full backdrop-blur-sm shrink-0 whitespace-nowrap ml-2">
                 {mode==='cloud' && isOnline ? <span className="flex items-center gap-1"><Icons.Cloud size={10}/> 雲端</span> : <span className="flex items-center gap-1"><Icons.Database size={10}/> 本地</span>}
              </div>
@@ -694,17 +802,15 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
 
       <main className="pb-24 px-4 pt-4 print:hidden">
         {activeTab === 'plan' ? (
-          <div className="space-y-1"> {/* 減少垂直間距，由 Flex 佈局控制 */}
+          <div className="space-y-1">
             <div className="flex justify-between items-center mb-4"><h2 className="text-lg font-bold text-slate-700 flex items-center gap-2"><Icons.Calendar/> <span>Day {day}</span><span className="text-xs bg-slate-100 px-2 rounded-full text-slate-500">{getDisplayD()}</span></h2>
             <div className="flex gap-2">
               {dailyItems.length > 0 && <button onClick={()=>setDeleteModal({isOpen:true, type:'batch_day'})} className="text-red-500 bg-white border border-red-100 p-2 rounded-full shadow-sm"><Icons.Trash/></button>}
               <button onClick={()=>setImportOpen(true)} className="text-sky-600 bg-white border border-sky-100 p-2 rounded-full"><Icons.FileText/></button>
-              {/* 離線時停用新增按鈕，避免衝突 */}
               <button onClick={()=>{if(!isOnline){alert("離線模式無法新增行程");return;} setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[]}); setEditOpen(true)}} className={`p-2 rounded-full shadow-md ${!isOnline ? 'bg-slate-400 cursor-not-allowed' : 'bg-sky-600 text-white'}`}><Icons.Plus/></button>
             </div>
             </div>
             
-            {/* Timeline View Container */}
             <div className="relative">
                {dailyItems.length === 0 && <div className="text-center text-slate-300 py-10 text-sm">點擊 + 新增第一個行程</div>}
                {dailyItems.map((item, idx) => {
@@ -713,26 +819,15 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
 
                   return (
                     <div key={item.id} className="flex relative">
-                      {/* Left: Time */}
                       <div className="w-14 flex-shrink-0 flex flex-col items-end pr-3 pt-5 relative">
                         <span className={`text-xs font-bold font-mono ${style.text}`}>{item.time}</span>
                       </div>
-
-                      {/* Middle: Line & Dot */}
                       <div className="relative flex flex-col items-center w-6 flex-shrink-0">
-                        {/* Vertical Line */}
                         <div className={`w-0.5 flex-1 ${style.line} ${isLast ? 'bg-gradient-to-b from-current to-transparent max-h-full' : ''}`} style={{ minHeight: '60px' }}></div>
-                        {/* Dot */}
                         <div className={`absolute top-5 w-3 h-3 rounded-full border-2 border-white shadow-sm z-10 ${style.dot}`}></div>
                       </div>
-
-                      {/* Right: Content Card (Swipeable) */}
                       <div className="flex-1 pb-4 pl-2 min-w-0">
-                        <SwipeableRow 
-                          className="" 
-                          onDeleteRequest={()=>setDeleteModal({isOpen:true, id:item.id, type:'itinerary'})} 
-                          onEdit={()=>setEditingItem(item)}
-                        >
+                        <SwipeableRow onDeleteRequest={()=>setDeleteModal({isOpen:true, id:item.id, type:'itinerary'})} onEdit={()=>setEditingItem(item)}>
                            <div className={`p-3 rounded-xl border relative shadow-sm transition-all active:scale-[0.98] ${style.bg} ${style.border} ${item.completed ? 'opacity-60 grayscale' : ''}`}>
                              <div className="flex justify-between items-start">
                                <div className="flex-1 min-w-0">
@@ -743,11 +838,8 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
                                      <span className="flex items-center gap-0.5">{typeIcon(item.type)} {item.type.toUpperCase()}</span>
                                      {item.location && <span className="flex items-center gap-0.5 truncate"><Icons.MapPin size={10}/> {item.location}</span>}
                                   </div>
-                                  
                                   {(item.notes || safeAtt(item).length>0) && <div className="mt-2 bg-white/60 p-2 rounded text-sm text-slate-600 border border-black/5 whitespace-pre-wrap">{renderTextWithLinks(item.notes)}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(item), index:i})}}/>)}</div>}</div>}
                                </div>
-                               
-                               {/* Controls */}
                                <div className="flex flex-col gap-3 ml-2">
                                  <button onClick={(e)=>{e.stopPropagation(); handleItemAction('itinerary', 'update', {completed:!item.completed}, item.id)}} className={`${item.completed?'text-emerald-500':'text-slate-300'} hover:text-emerald-500`}><Icons.Check size={18}/></button>
                                  <div className="flex flex-col gap-1">
