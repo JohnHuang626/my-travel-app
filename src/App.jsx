@@ -507,6 +507,18 @@ const getDisplayDate = (start, dayIdx) => {
   } catch { return `Day ${dayIdx}`; }
 };
 
+// 新增：根據目前日期與旅遊開始/結束日期，決定飛機朝向的 class
+const getPlaneRotation = (startDate, endDate) => {
+  if (!startDate || !endDate) return "rotate-0";
+  const today = new Date();
+  // 將今天的日期轉換為 YYYY-MM-DD 格式以進行比較
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  if (todayStr < startDate) return "rotate-0"; // 未出發：朝上
+  if (todayStr > endDate) return "rotate-180"; // 已結束：朝下
+  return "rotate-90"; // 旅遊中：朝右
+};
+
 const MOODS = [
   {k:'happy',i:'😊',l:'開心'},{k:'excited',i:'😆',l:'興奮'},{k:'relaxed',i:'😌',l:'放鬆'},{k:'loved',i:'🥰',l:'幸福'},
   {k:'hungry',i:'😋',l:'貪吃'},{k:'surprised',i:'😲',l:'驚訝'},{k:'tired',i:'😴',l:'累了'},{k:'cool',i:'😎',l:'耍酷'},
@@ -597,12 +609,13 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
         <div className="space-y-3">
           {trips.length===0 && !isCreating && <div className="text-center text-slate-400 py-8">暫無行程</div>}
           {trips.map(t => (
-            // FIX: 加入 py-2 和 min-h-[6rem] 來適應多行文字
             <div key={t.id} onClick={() => onSelect(t.id)} className="relative bg-white rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer hover:shadow-md h-auto min-h-[6rem] overflow-hidden py-2">
                {t.coverImage ? <><img src={t.coverImage} className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div></> : <div className="absolute inset-0 bg-gradient-to-r from-sky-50 to-white"></div>}
                <div className="relative z-10 flex items-center gap-4 w-full p-4">
-                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0 ${t.coverImage?'bg-white/20 backdrop-blur text-white':'bg-sky-100 text-slate-700'}`}><Icons.Plane/></div>
-                 {/* FIX: 長名稱自動縮小並換行顯示 (最多兩行) */}
+                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0 ${t.coverImage?'bg-white/20 backdrop-blur text-white':'bg-sky-100 text-slate-700'}`}>
+                   {/* 這裡應用動態的飛機轉向 class */}
+                   <Icons.Plane className={`transform transition-transform duration-500 ${getPlaneRotation(t.startDate, t.endDate)}`} />
+                 </div>
                  <div className="flex-1 min-w-0">
                     <h3 className={`font-bold ${t.name.length > 6 ? 'text-base whitespace-normal break-words line-clamp-2 leading-tight' : 'text-lg truncate'} ${t.coverImage?'text-white':'text-slate-800'}`}>{t.name}</h3>
                     <p className={`text-xs mt-1 ${t.coverImage?'text-white/80':'text-slate-400'}`}>{t.startDate} ~ {t.endDate}</p>
@@ -614,7 +627,6 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode }) {
         </div>
       </div>
       
-      {/* 隱藏的資料管理按鈕 */}
       <button onClick={() => setDataToolsModal(true)} className="fixed bottom-4 left-4 z-50 p-3 bg-white text-slate-600 shadow-lg rounded-full border border-slate-200 hover:text-sky-600 hover:border-sky-200 transition-colors">
         <Icons.Database size={20}/>
       </button>
@@ -728,8 +740,11 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
         title={deleteModal.type === 'batch_day' ? "清空當日行程" : "確認刪除"} 
         message={deleteModal.type === 'batch_day' ? `確定要刪除 Day ${day} 的所有行程嗎？` : "確定要刪除這個項目嗎？"}
         onConfirm={() => { 
-          if (deleteModal.type === 'batch_day') performBatchDelete();
-          else handleItemAction(deleteModal.type, 'delete', null, deleteModal.id); 
+          if (deleteModal.type === 'batch_day') {
+             performBatchDelete();
+          } else {
+             handleItemAction(deleteModal.type, 'delete', null, deleteModal.id); 
+          }
           setDeleteModal({ isOpen: false }); 
         }} 
         onCancel={() => setDeleteModal({ isOpen: false })} 
@@ -775,7 +790,6 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
          <div className="relative z-10 h-full flex flex-col justify-between">
            <div className="flex items-center gap-3">
              <button onClick={onBack} className="p-1 hover:bg-white/20 rounded-full shrink-0"><Icons.Plane className="transform rotate-180"/></button>
-             {/* FIX: 行程內頁的標題也支援換行 */}
              <div className="flex-1 min-w-0">
                 <h1 className={`font-bold ${trip.name.length > 6 ? 'text-lg whitespace-normal break-words line-clamp-2 leading-snug' : 'text-xl truncate'}`}>
                   {trip.name}
@@ -784,7 +798,6 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
              </div>
              
              <div className="flex items-center shrink-0">
-               {/* 匯出 PDF/列印按鈕 */}
                <button onClick={() => window.print()} className="p-2 hover:bg-white/20 rounded-full transition-colors" title="列印行程 / 匯出 PDF"><Icons.Printer/></button>
                <button onClick={()=>{setSettingsOpen(true)}} className="p-2 hover:bg-white/20 rounded-full"><Icons.Settings/></button>
              </div>
@@ -800,7 +813,7 @@ function TripDetail({ trip, mode, onUpdate, onBack }) {
          </div>
       </header>
 
-      <main className="pb-24 px-4 pt-4 print:hidden">
+      <main className="pb-24 px-4 pt-4 print:hidden flex-1 overflow-y-auto">
         {activeTab === 'plan' ? (
           <div className="space-y-1">
             <div className="flex justify-between items-center mb-4"><h2 className="text-lg font-bold text-slate-700 flex items-center gap-2"><Icons.Calendar/> <span>Day {day}</span><span className="text-xs bg-slate-100 px-2 rounded-full text-slate-500">{getDisplayD()}</span></h2>
