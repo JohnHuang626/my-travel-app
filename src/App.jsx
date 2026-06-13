@@ -411,20 +411,6 @@ const ImageViewer = ({ images, initialIndex, onClose }) => {
   );
 };
 
-const SwipeableRow = ({ children, onDeleteRequest, onEdit, className = "" }) => {
-  const [offset, setOffset] = useState(0);
-  const startX = useRef(0);
-  const handleStart = (cx) => { startX.current = cx; };
-  const handleMove = (cx) => { const diff = cx - startX.current; if (diff < 0) setOffset(Math.max(diff, -80)); };
-  const handleEnd = () => setOffset(offset < -40 ? -80 : 0);
-  return (
-    <div className={`relative w-full rounded-xl h-auto select-none overflow-visible group touch-pan-y ${className}`}>
-      <div className="absolute inset-0 bg-red-500 rounded-xl flex justify-end items-center z-0"><button onClick={(e) => { e.stopPropagation(); onDeleteRequest(() => setOffset(0)); }} className="w-20 h-full flex flex-col items-center justify-center text-white active:bg-red-600 transition-colors"><Icons.Trash size={20} /><span className="text-[10px] font-bold mt-1">刪除</span></button></div>
-      <div className="relative z-10 transition-transform duration-200 ease-out h-full w-full" style={{ transform: `translateX(${offset}px)` }} onTouchStart={e => handleStart(e.touches[0].clientX)} onTouchMove={e => handleMove(e.touches[0].clientX)} onTouchEnd={handleEnd} onMouseDown={e => handleStart(e.clientX)} onMouseMove={e => handleMove(e.clientX)} onMouseUp={handleEnd} onMouseLeave={handleEnd} onClick={() => { if (offset < 0) setOffset(0); else onEdit(); }}>{children}</div>
-    </div>
-  );
-};
-
 const ImportModal = ({ isOpen, onClose, onImport }) => {
   const isDark = React.useContext(ThemeContext);
   const [text, setText] = useState('');
@@ -787,24 +773,18 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
         </div>
       </Modal>
 
-      {/* 修改處：解除固定高度，改為 flex flex-col 與自動彈性高度，防止被文字擠壓而破版 */}
       <header className={`relative text-white p-4 pt-10 shadow-md z-20 print:hidden transition-colors duration-300 flex flex-col ${trip.coverImage ? 'min-h-[11rem]' : (isDark ? 'bg-slate-800 min-h-[11rem]' : 'bg-sky-600 min-h-[11rem]')}`}>
          {trip.coverImage && <><img src={trip.coverImage} className="absolute inset-0 w-full h-full object-cover"/><div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/80"></div></>}
          
          <div className="relative z-10 flex-1 flex flex-col justify-between">
-           {/* 頂部：返回鍵、標題、控制按鈕 */}
            <div className="flex items-start gap-2">
              <button onClick={onBack} className="p-1 mt-0.5 hover:bg-white/20 rounded-full shrink-0 transition-colors"><Icons.Plane className="transform rotate-180"/></button>
-             
-             {/* 標題區 */}
              <div className="flex-1 min-w-0 pr-1">
                 <h1 className={`font-bold ${trip.name.length > 6 ? 'text-lg whitespace-normal break-words leading-snug' : 'text-xl truncate'}`}>
                   {trip.name}
                 </h1>
                 <p className="text-[10px] opacity-80 mt-1">{trip.startDate} ~ {trip.endDate}</p>
              </div>
-             
-             {/* 右上角控制區：縮小圖示並縮減間距 */}
              <div className="flex items-center shrink-0 gap-0.5 mt-0.5">
                <button onClick={toggleTheme} className="p-1.5 hover:bg-white/20 rounded-full transition-colors" title="切換深色/淺色模式">
                  {isDark ? <Icons.Sun size={18}/> : <Icons.Moon size={18}/>}
@@ -814,12 +794,10 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
              </div>
            </div>
            
-           {/* 底部：日期按鈕列與狀態標籤 */}
            <div className="flex justify-between items-end mt-4">
              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">
                {Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? (isDark ? 'bg-slate-700 text-sky-400 shadow-lg border border-slate-600' : 'bg-white text-sky-600 scale-105 shadow') : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}
              </div>
-             
              <div className="pb-2 text-[9px] opacity-80 flex items-center gap-1 bg-black/30 px-2 py-1 rounded-full backdrop-blur-sm shrink-0 whitespace-nowrap ml-2 mb-1">
                 {mode==='cloud' && isOnline ? <span className="flex items-center gap-1"><Icons.Cloud size={10}/> 雲端</span> : <span className="flex items-center gap-1"><Icons.Database size={10}/> 本地</span>}
              </div>
@@ -854,8 +832,9 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
                         <div className={`absolute top-5 w-3 h-3 rounded-full border-2 ${isDark ? 'border-slate-900' : 'border-white'} shadow-sm z-10 ${style.dot}`}></div>
                       </div>
                       <div className="flex-1 pb-4 pl-2 min-w-0">
-                        <SwipeableRow onDeleteRequest={()=>setDeleteModal({isOpen:true, id:item.id, type:'itinerary'})} onEdit={()=>setEditingItem(item)}>
-                           <div className={`p-3 rounded-xl border relative shadow-sm transition-all active:scale-[0.98] ${style.bg} ${style.border} ${item.completed ? 'opacity-60 grayscale' : ''}`}>
+                        <div 
+                           onClick={()=>setEditingItem(item)}
+                           className={`p-3 rounded-xl border relative shadow-sm transition-all active:scale-[0.98] cursor-pointer ${style.bg} ${style.border} ${item.completed ? 'opacity-60 grayscale' : ''}`}>
                              <div className="flex justify-between items-start">
                                <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1 mb-1">
@@ -875,8 +854,7 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
                                  </div>
                                </div>
                              </div>
-                           </div>
-                        </SwipeableRow>
+                        </div>
                       </div>
                     </div>
                   );
@@ -890,15 +868,13 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
                const linked = dailyItems.find(i=>i.id===m.linkedId);
                const moodData = MOODS.find(x=>x.k===m.mood) || MOODS[0];
                return (
-                 <SwipeableRow key={m.id} onDeleteRequest={()=>setDeleteModal({isOpen:true, id:m.id, type:'memories'})} onEdit={()=>setEditingItem(m)} className="mb-4">
-                    <div className={`p-3 relative shadow-sm rounded-xl border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-                      <div className={`absolute top-2 right-2 ${isDark ? 'text-slate-500' : 'text-slate-300'}`}><Icons.Settings/></div>
-                      {safeAtt(m).length>0 && <div className="flex gap-1 mb-2">{safeAtt(m).map((a,i)=><img key={i} src={a} className={`h-20 w-full object-cover rounded cursor-pointer hover:opacity-80 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`} onClick={e=>{e.stopPropagation();setGallery({images:safeAtt(m), index:i})}}/>)}</div>}
-                      {linked && <div className={`text-xs inline-block px-1 rounded mb-1 border ${isDark ? 'bg-sky-900/30 text-sky-400 border-sky-900/50' : 'bg-sky-50 text-sky-600 border-sky-100'}`}><Icons.MapPin/> 於 {linked.activity}</div>}
-                      <p className={`text-sm whitespace-pre-wrap ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{m.text}</p>
-                      <div className={`mt-2 pt-2 border-t flex justify-between text-xs ${isDark ? 'border-slate-700 text-slate-400' : 'border-slate-100 text-slate-400'}`}><span>{m.time}</span><span title={moodData.l}>{moodData.i}</span></div>
-                    </div>
-                 </SwipeableRow>
+                 <div key={m.id} onClick={()=>setEditingItem(m)} className={`mb-4 p-3 relative shadow-sm rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                    <div className={`absolute top-2 right-2 ${isDark ? 'text-slate-500' : 'text-slate-300'}`}><Icons.Settings/></div>
+                    {safeAtt(m).length>0 && <div className="flex gap-1 mb-2">{safeAtt(m).map((a,i)=><img key={i} src={a} className={`h-20 w-full object-cover rounded cursor-pointer hover:opacity-80 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`} onClick={e=>{e.stopPropagation();setGallery({images:safeAtt(m), index:i})}}/>)}</div>}
+                    {linked && <div className={`text-xs inline-block px-1 rounded mb-1 border ${isDark ? 'bg-sky-900/30 text-sky-400 border-sky-900/50' : 'bg-sky-50 text-sky-600 border-sky-100'}`}><Icons.MapPin/> 於 {linked.activity}</div>}
+                    <p className={`text-sm whitespace-pre-wrap ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{m.text}</p>
+                    <div className={`mt-2 pt-2 border-t flex justify-between text-xs ${isDark ? 'border-slate-700 text-slate-400' : 'border-slate-100 text-slate-400'}`}><span>{m.time}</span><span title={moodData.l}>{moodData.i}</span></div>
+                 </div>
                );
             })}
           </div>
