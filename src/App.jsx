@@ -787,31 +787,40 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
         </div>
       </Modal>
 
-      <header className={`relative text-white p-4 pt-8 shadow-md z-20 print:hidden transition-colors duration-300 ${trip.coverImage?'h-40':(isDark?'bg-slate-800':'bg-sky-600')}`}>
+      {/* 修改處：解除固定高度，改為 flex flex-col 與自動彈性高度，防止被文字擠壓而破版 */}
+      <header className={`relative text-white p-4 pt-10 shadow-md z-20 print:hidden transition-colors duration-300 flex flex-col ${trip.coverImage ? 'min-h-[11rem]' : (isDark ? 'bg-slate-800 min-h-[11rem]' : 'bg-sky-600 min-h-[11rem]')}`}>
          {trip.coverImage && <><img src={trip.coverImage} className="absolute inset-0 w-full h-full object-cover"/><div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/80"></div></>}
-         <div className="relative z-10 h-full flex flex-col justify-between">
-           <div className="flex items-center gap-3">
-             <button onClick={onBack} className="p-1 hover:bg-white/20 rounded-full shrink-0 transition-colors"><Icons.Plane className="transform rotate-180"/></button>
-             <div className="flex-1 min-w-0">
-                <h1 className={`font-bold ${trip.name.length > 6 ? 'text-lg whitespace-normal break-words line-clamp-2 leading-snug' : 'text-xl truncate'}`}>
+         
+         <div className="relative z-10 flex-1 flex flex-col justify-between">
+           {/* 頂部：返回鍵、標題、控制按鈕 */}
+           <div className="flex items-start gap-2">
+             <button onClick={onBack} className="p-1 mt-0.5 hover:bg-white/20 rounded-full shrink-0 transition-colors"><Icons.Plane className="transform rotate-180"/></button>
+             
+             {/* 標題區 */}
+             <div className="flex-1 min-w-0 pr-1">
+                <h1 className={`font-bold ${trip.name.length > 6 ? 'text-lg whitespace-normal break-words leading-snug' : 'text-xl truncate'}`}>
                   {trip.name}
                 </h1>
-                <p className="text-xs opacity-80 mt-1">{trip.startDate} ~ {trip.endDate}</p>
+                <p className="text-[10px] opacity-80 mt-1">{trip.startDate} ~ {trip.endDate}</p>
              </div>
              
-             <div className="flex items-center shrink-0 gap-1">
-               <button onClick={toggleTheme} className="p-2 hover:bg-white/20 rounded-full transition-colors" title="切換深色/淺色模式">
-                 {isDark ? <Icons.Sun/> : <Icons.Moon/>}
+             {/* 右上角控制區：縮小圖示並縮減間距 */}
+             <div className="flex items-center shrink-0 gap-0.5 mt-0.5">
+               <button onClick={toggleTheme} className="p-1.5 hover:bg-white/20 rounded-full transition-colors" title="切換深色/淺色模式">
+                 {isDark ? <Icons.Sun size={18}/> : <Icons.Moon size={18}/>}
                </button>
-               <button onClick={() => window.print()} className="p-2 hover:bg-white/20 rounded-full transition-colors" title="列印行程 / 匯出 PDF"><Icons.Printer/></button>
-               <button onClick={()=>{setSettingsOpen(true)}} className="p-2 hover:bg-white/20 rounded-full transition-colors"><Icons.Settings/></button>
+               <button onClick={() => window.print()} className="p-1.5 hover:bg-white/20 rounded-full transition-colors" title="列印行程 / 匯出 PDF"><Icons.Printer size={18}/></button>
+               <button onClick={()=>{setSettingsOpen(true)}} className="p-1.5 hover:bg-white/20 rounded-full transition-colors"><Icons.Settings size={18}/></button>
              </div>
            </div>
            
-           <div className="flex justify-between items-end mt-2">
-             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">{Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? (isDark ? 'bg-slate-700 text-sky-400 shadow-lg border border-slate-600' : 'bg-white text-sky-600 scale-105 shadow') : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}</div>
+           {/* 底部：日期按鈕列與狀態標籤 */}
+           <div className="flex justify-between items-end mt-4">
+             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">
+               {Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? (isDark ? 'bg-slate-700 text-sky-400 shadow-lg border border-slate-600' : 'bg-white text-sky-600 scale-105 shadow') : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}
+             </div>
              
-             <div className="pb-3 text-[10px] opacity-80 flex items-center gap-1 bg-black/20 px-2 py-1 rounded-full backdrop-blur-sm shrink-0 whitespace-nowrap ml-2">
+             <div className="pb-2 text-[9px] opacity-80 flex items-center gap-1 bg-black/30 px-2 py-1 rounded-full backdrop-blur-sm shrink-0 whitespace-nowrap ml-2 mb-1">
                 {mode==='cloud' && isOnline ? <span className="flex items-center gap-1"><Icons.Cloud size={10}/> 雲端</span> : <span className="flex items-center gap-1"><Icons.Database size={10}/> 本地</span>}
              </div>
            </div>
