@@ -657,6 +657,23 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  // 滑動狀態與 Ref
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+  const dayListRef = useRef(null);
+  const totalDays = calculateDays(trip.startDate, trip.endDate);
+
+  // 監聽日期改變時，自動置中滾動上方天數列
+  useEffect(() => {
+    if (dayListRef.current && dayListRef.current.children[day - 1]) {
+      dayListRef.current.children[day - 1].scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [day]);
+
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -725,8 +742,36 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
     if (Service.mode === 'local') setItems(res);
   };
 
+  // 處理全域觸控滑動
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    
+    const deltaX = touchStartX.current - touchEndX; // 正數代表向左滑
+    const deltaY = touchStartY.current - touchEndY;
+
+    // 如果水平滑動距離大於垂直滑動，且超過 60px 閥值，則視為有效左右滑動
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 60) {
+      if (deltaX > 0 && day < totalDays) {
+        setDay(d => d + 1); // 向左滑 -> 下一天
+      } else if (deltaX < 0 && day > 1) {
+        setDay(d => d - 1); // 向右滑 -> 上一天
+      }
+    }
+    
+    // 重置觸控紀錄
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
   const getDisplayD = () => getDisplayDate(trip.startDate, day);
-  const totalDays = calculateDays(trip.startDate, trip.endDate);
   const isItineraryEdit = editingItem && editingItem.hasOwnProperty('activity');
   const dailyItems = items.filter(i => i.day === day);
   const dailyMemories = memories.filter(m => m.day === day);
@@ -795,7 +840,7 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
            </div>
            
            <div className="flex justify-between items-end mt-4">
-             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto">
+             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mt-auto" ref={dayListRef}>
                {Array.from({length: totalDays}).map((_, i) => (<button key={i} onClick={()=>setDay(i+1)} className={`flex-shrink-0 w-12 h-14 rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all ${day === i+1 ? (isDark ? 'bg-slate-700 text-sky-400 shadow-lg border border-slate-600' : 'bg-white text-sky-600 scale-105 shadow') : 'bg-white/20 text-white'}`}><span className="text-xs opacity-70">Day</span><span className="text-lg font-bold">{i+1}</span></button>))}
              </div>
              <div className="pb-2 text-[9px] opacity-80 flex items-center gap-1 bg-black/30 px-2 py-1 rounded-full backdrop-blur-sm shrink-0 whitespace-nowrap ml-2 mb-1">
@@ -805,7 +850,12 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
          </div>
       </header>
 
-      <main className="pb-24 px-4 pt-4 print:hidden flex-1 overflow-y-auto">
+      {/* 為 main 加入全域觸控事件以支援左右滑動切換天數 */}
+      <main 
+        className="pb-24 px-4 pt-4 print:hidden flex-1 overflow-y-auto"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {activeTab === 'plan' ? (
           <div className="space-y-1">
             <div className="flex justify-between items-center mb-4"><h2 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-slate-200' : 'text-slate-700'}`}><Icons.Calendar/> <span>Day {day}</span><span className={`text-xs px-2 rounded-full ${isDark ? 'bg-slate-800 text-slate-400 border border-slate-700' : 'bg-slate-100 text-slate-500'}`}>{getDisplayD()}</span></h2>
@@ -817,7 +867,7 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
             </div>
             
             <div className="relative">
-               {dailyItems.length === 0 && <div className={`text-center py-10 text-sm ${isDark ? 'text-slate-500' : 'text-slate-300'}`}>點擊 + 新增第一個行程</div>}
+               {dailyItems.length === 0 && <div className={`text-center py-10 text-sm ${isDark ? 'text-slate-500' : 'text-slate-300'}`}>點擊 + 新增第一個行程<br/><span className="text-xs mt-2 block opacity-70">💡 提示：在畫面上左右滑動可以切換天數喔！</span></div>}
                {dailyItems.map((item, idx) => {
                   const style = getTypeStyle(item.type, isDark);
                   const isLast = idx === dailyItems.length - 1;
@@ -832,10 +882,11 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
                         <div className={`absolute top-5 w-3 h-3 rounded-full border-2 ${isDark ? 'border-slate-900' : 'border-white'} shadow-sm z-10 ${style.dot}`}></div>
                       </div>
                       <div className="flex-1 pb-4 pl-2 min-w-0">
+                        {/* 將原本的 SwipeableRow 徹底移除，換成單純可點擊的 div */}
                         <div 
                            onClick={()=>setEditingItem(item)}
-                           className={`p-3 rounded-xl border relative shadow-sm transition-all active:scale-[0.98] cursor-pointer ${style.bg} ${style.border} ${item.completed ? 'opacity-60 grayscale' : ''}`}>
-                             <div className="flex justify-between items-start">
+                           className={`p-3 rounded-xl border relative shadow-sm transition-all active:scale-[0.98] cursor-pointer ${style.bg} ${style.border}`}>
+                             <div className={`flex justify-between items-start ${item.completed ? 'opacity-60 grayscale' : ''}`}>
                                <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1 mb-1">
                                     <h3 className={`font-bold text-base truncate ${item.completed ? 'line-through text-slate-500' : (isDark ? 'text-slate-200' : 'text-slate-800')}`}>{item.activity}</h3>
@@ -976,13 +1027,11 @@ function AppContent() {
     setIsDarkMode(prev => {
       const newMode = !prev;
       localStorage.setItem('tm_theme', newMode ? 'dark' : 'light');
-      // 動態更新 body 背景以防出現白邊
       document.body.style.backgroundColor = newMode ? '#0f172a' : '#f8fafc';
       return newMode;
     });
   };
 
-  // 確保初始載入時 body 背景正確
   useEffect(() => {
     document.body.style.backgroundColor = isDarkMode ? '#0f172a' : '#f8fafc';
   }, [isDarkMode]);
@@ -996,7 +1045,6 @@ function AppContent() {
 
   return (
     <ThemeContext.Provider value={isDarkMode}>
-      {/* 最外層容器加入深色模式判斷，並確保列印時不受影響 */}
       <div className={`min-h-screen font-sans max-w-md mx-auto shadow-2xl overflow-x-hidden border-x relative transition-colors duration-300 print:max-w-none print:w-full print:overflow-visible print:shadow-none print:border-none print:bg-white print:p-0 print:m-0 ${isDarkMode ? 'bg-slate-900 text-slate-100 border-slate-800' : 'bg-slate-50 text-slate-800 border-slate-200'}`}>
         <button onClick={()=>{if(confirm('重置所有資料?')){localStorage.clear(); window.location.reload();}}} className="fixed bottom-1 left-1 z-50 p-2 text-slate-300 hover:text-red-500 opacity-50 hidden print:hidden"><Icons.Refresh size={12}/></button>
 
