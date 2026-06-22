@@ -30,7 +30,9 @@ const getTypeStyle = (type, isDark) => {
     food:     { dot: 'bg-orange-400',    line: 'bg-orange-200',  text: isDark?'text-orange-400':'text-orange-600',  bg: isDark?'bg-orange-900/20':'bg-orange-50',  border: isDark?'border-orange-900/50':'border-orange-100' },
     shopping: { dot: 'bg-pink-400',      line: 'bg-pink-200',    text: isDark?'text-pink-400':'text-pink-600',    bg: isDark?'bg-pink-900/20':'bg-pink-50',    border: isDark?'border-pink-900/50':'border-pink-100' },
     transport:{ dot: 'bg-indigo-400',    line: 'bg-indigo-200',  text: isDark?'text-indigo-400':'text-indigo-600',  bg: isDark?'bg-indigo-900/20':'bg-indigo-50',  border: isDark?'border-indigo-900/50':'border-indigo-100' },
+    flight:   { dot: 'bg-blue-400',      line: 'bg-blue-200',    text: isDark?'text-blue-400':'text-blue-600',    bg: isDark?'bg-blue-900/20':'bg-blue-50',    border: isDark?'border-blue-900/50':'border-blue-100' },
     stay:     { dot: 'bg-emerald-400',   line: 'bg-emerald-200', text: isDark?'text-emerald-400':'text-emerald-600', bg: isDark?'bg-emerald-900/20':'bg-emerald-50', border: isDark?'border-emerald-900/50':'border-emerald-100' },
+    other:    { dot: 'bg-zinc-400',      line: 'bg-zinc-200',    text: isDark?'text-zinc-400':'text-zinc-600',    bg: isDark?'bg-zinc-900/20':'bg-zinc-50',    border: isDark?'border-zinc-900/50':'border-zinc-100' },
     default:  { dot: 'bg-slate-400',     line: 'bg-slate-200',   text: isDark?'text-slate-400':'text-slate-600',   bg: isDark?'bg-slate-800':'bg-white',      border: isDark?'border-slate-700':'border-slate-100' }
   };
   return styles[type] || styles.default;
@@ -52,7 +54,7 @@ const Icons = {
   MapPin: (p) => <SvgIcon {...p}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></SvgIcon>,
   ArrowLeft: (p) => <SvgIcon {...p}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></SvgIcon>,
   X: (p) => <SvgIcon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></SvgIcon>,
-  Settings: (p) => <SvgIcon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></SvgIcon>,
+  Settings: (p) => <SvgIcon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></SvgIcon>,
   ArrowUp: (p) => <SvgIcon {...p}><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></SvgIcon>,
   ArrowDown: (p) => <SvgIcon {...p}><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></SvgIcon>,
   ChevronRight: (p) => <SvgIcon {...p}><polyline points="9 18 15 12 9 6"/></SvgIcon>,
@@ -74,7 +76,7 @@ const Icons = {
 };
 
 // ==========================================
-// 3. Local Database (IndexedDB)
+// 2. Local Database (IndexedDB)
 // ==========================================
 
 const LocalDB = {
@@ -531,7 +533,7 @@ const MOODS = [
   {k:'angry',i:'😠',l:'生氣'},{k:'sad',i:'😢',l:'難過'}
 ];
 
-const TYPE_ICONS = { fun:'🎡', food:'🍜', shopping:'🛍️', transport:'🚆', stay:'🏨' };
+const TYPE_ICONS = { fun:'🎡', food:'🍜', shopping:'🛍️', transport:'🚆', stay:'🏨', flight:'✈️', other:'📌' };
 
 const renderTextWithLinks = (text, isDark) => {
   if (!text) return null;
@@ -555,8 +557,6 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode, toggleTheme }) {
   const [logoutModal, setLogoutModal] = useState(false);
   const [dataToolsModal, setDataToolsModal] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -582,7 +582,6 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode, toggleTheme }) {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><Icons.Plane /> 我的旅程</h1>
           <div className="text-[10px] opacity-80 mt-1 flex items-center gap-1">
-            {isStandalone && <span className="bg-white/20 px-1 rounded flex items-center gap-1">📱 App 模式</span>}
             {mode==='cloud' && isOnline ? <span className="flex items-center gap-1"><Icons.Cloud size={10}/> 雲端備份中</span> : <span className="flex items-center gap-1"><Icons.CloudOff size={10}/> 離線模式</span>}
           </div>
         </div>
@@ -657,20 +656,14 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // 滑動狀態與 Ref
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
   const dayListRef = useRef(null);
   const totalDays = calculateDays(trip.startDate, trip.endDate);
 
-  // 監聽日期改變時，自動置中滾動上方天數列
   useEffect(() => {
     if (dayListRef.current && dayListRef.current.children[day - 1]) {
-      dayListRef.current.children[day - 1].scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center'
-      });
+      dayListRef.current.children[day - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
   }, [day]);
 
@@ -682,11 +675,10 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
     return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
   }, []);
   
-  const [newItem, setNewItem] = useState({ time: '', activity: '', location: '', type: 'fun', notes: '', attachments: [] });
+  const [newItem, setNewItem] = useState({ time: '', activity: '', location: '', type: 'fun', notes: '', attachments: [], flightNo: '' });
   const [newMem, setNewMem] = useState({ text: '', mood: 'happy', attachments: [], linkedId: '' });
 
   const fileRef = useRef(null);
-  
   const [items, setItems] = useState([]);
   const [memories, setMemories] = useState([]);
 
@@ -712,8 +704,13 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
       const [time, activity, location='', typeRaw='fun'] = p;
       let type='fun';
       const lt = typeRaw.toLowerCase();
-      if(lt.includes('食')||lt==='food') type='food'; else if(lt.includes('購')||lt.includes('shopping')||lt.includes('buy')||lt.includes('outlet')) type='shopping'; else if(lt.includes('通')||lt.includes('transport')) type='transport'; else if(lt.includes('住')||lt.includes('stay')) type='stay';
-      await handleItemAction('itinerary', 'add', { day, time, activity, location, type, notes: '', attachments: [], completed: false });
+      if(lt.includes('食')||lt==='food') type='food'; 
+      else if(lt.includes('購')||lt.includes('shopping')||lt.includes('buy')||lt.includes('outlet')) type='shopping'; 
+      else if(lt.includes('飛機')||lt.includes('航班')||lt.includes('flight')) type='flight'; 
+      else if(lt.includes('通')||lt.includes('車')||lt.includes('transport')) type='transport'; 
+      else if(lt.includes('住')||lt.includes('stay')) type='stay';
+      else if(lt.includes('其他')||lt.includes('other')) type='other';
+      await handleItemAction('itinerary', 'add', { day, time, activity, location, type, notes: '', attachments: [], completed: false, flightNo: '' });
     }
     setImportOpen(false);
   };
@@ -742,7 +739,6 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
     if (Service.mode === 'local') setItems(res);
   };
 
-  // 處理全域觸控滑動
   const handleTouchStart = (e) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -750,23 +746,14 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
 
   const handleTouchEnd = (e) => {
     if (touchStartX.current === null || touchStartY.current === null) return;
-    
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
-    
-    const deltaX = touchStartX.current - touchEndX; // 正數代表向左滑
+    const deltaX = touchStartX.current - touchEndX;
     const deltaY = touchStartY.current - touchEndY;
-
-    // 如果水平滑動距離大於垂直滑動，且超過 60px 閥值，則視為有效左右滑動
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 60) {
-      if (deltaX > 0 && day < totalDays) {
-        setDay(d => d + 1); // 向左滑 -> 下一天
-      } else if (deltaX < 0 && day > 1) {
-        setDay(d => d - 1); // 向右滑 -> 上一天
-      }
+      if (deltaX > 0 && day < totalDays) setDay(d => d + 1);
+      else if (deltaX < 0 && day > 1) setDay(d => d - 1);
     }
-    
-    // 重置觸控紀錄
     touchStartX.current = null;
     touchStartY.current = null;
   };
@@ -792,10 +779,29 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
              <>
                <div className="flex gap-2">
                  <input type="time" className={`border p-2 rounded w-1/3 outline-none focus:ring-2 focus:ring-sky-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`} value={editingItem?editingItem.time:newItem.time} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, time:v}):setNewItem({...newItem, time:v})}} />
-                 <select className={`border p-2 rounded w-2/3 outline-none focus:ring-2 focus:ring-sky-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`} value={editingItem?editingItem.type:newItem.type} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, type:v}):setNewItem({...newItem, type:v})}}><option value="fun">🎡 景點</option><option value="food">🍜 美食</option><option value="shopping">🛍️ 購物</option><option value="transport">🚆 交通</option><option value="stay">🏨 住宿</option></select>
+                 <select className={`border p-2 rounded w-2/3 outline-none focus:ring-2 focus:ring-sky-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-800'}`} value={editingItem?editingItem.type:newItem.type} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, type:v}):setNewItem({...newItem, type:v})}}>
+                   <option value="fun">🎡 景點</option>
+                   <option value="food">🍜 美食</option>
+                   <option value="shopping">🛍️ 購物</option>
+                   <option value="transport">🚆 一般交通</option>
+                   <option value="flight">✈️ 航班</option>
+                   <option value="stay">🏨 住宿</option>
+                   <option value="other">📌 其他</option>
+                 </select>
                </div>
                <input className={`w-full border p-2 rounded outline-none focus:ring-2 focus:ring-sky-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-slate-200 placeholder-slate-400'}`} placeholder="名稱" value={editingItem?editingItem.activity:newItem.activity} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, activity:v}):setNewItem({...newItem, activity:v})}} />
                <LocationInput placeholder="地點" value={editingItem?editingItem.location:newItem.location} onChange={v=>editingItem?setEditingItem({...editingItem, location:v}):setNewItem({...newItem, location:v})} />
+               
+               {/* 當選擇航班時，出現航班號碼輸入框 */}
+               {(editingItem ? editingItem.type : newItem.type) === 'flight' && (
+                 <input 
+                   className={`w-full border p-2 rounded outline-none focus:ring-2 focus:ring-sky-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-slate-200 placeholder-slate-400'}`} 
+                   placeholder="航班號碼 (如 IT214) 以啟用追蹤" 
+                   value={editingItem ? (editingItem.flightNo || '') : (newItem.flightNo || '')} 
+                   onChange={e => { const v = e.target.value; editingItem ? setEditingItem({...editingItem, flightNo: v}) : setNewItem({...newItem, flightNo: v}) }} 
+                 />
+               )}
+               
                <textarea className={`w-full border p-2 rounded h-20 outline-none focus:ring-2 focus:ring-sky-500 ${isDark ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-slate-200 placeholder-slate-400'}`} placeholder="備註 (支援網址與換行)" value={editingItem?editingItem.notes:newItem.notes} onChange={e=>{const v=e.target.value; editingItem?setEditingItem({...editingItem, notes:v}):setNewItem({...newItem, notes:v})}} />
              </>
            ) : (
@@ -850,7 +856,6 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
          </div>
       </header>
 
-      {/* 為 main 加入全域觸控事件以支援左右滑動切換天數 */}
       <main 
         className="pb-24 px-4 pt-4 print:hidden flex-1 overflow-y-auto"
         onTouchStart={handleTouchStart}
@@ -862,7 +867,7 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
             <div className="flex gap-2">
               {dailyItems.length > 0 && <button onClick={()=>setDeleteModal({isOpen:true, type:'batch_day'})} className={`border p-2 rounded-full shadow-sm transition-colors ${isDark ? 'bg-slate-800 border-red-900/50 text-red-400 hover:bg-slate-700' : 'bg-white border-red-100 text-red-500'}`}><Icons.Trash/></button>}
               <button onClick={()=>setImportOpen(true)} className={`border p-2 rounded-full transition-colors ${isDark ? 'bg-slate-800 border-sky-900/50 text-sky-400 hover:bg-slate-700' : 'bg-white border-sky-100 text-sky-600'}`}><Icons.FileText/></button>
-              <button onClick={()=>{if(!isOnline){alert("離線模式無法新增行程");return;} setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[]}); setEditOpen(true)}} className={`p-2 rounded-full shadow-md transition-colors ${!isOnline ? 'bg-slate-500 cursor-not-allowed text-white' : 'bg-sky-600 hover:bg-sky-500 text-white'}`}><Icons.Plus/></button>
+              <button onClick={()=>{if(!isOnline){alert("離線模式無法新增行程");return;} setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[], flightNo:''}); setEditOpen(true)}} className={`p-2 rounded-full shadow-md transition-colors ${!isOnline ? 'bg-slate-500 cursor-not-allowed text-white' : 'bg-sky-600 hover:bg-sky-500 text-white'}`}><Icons.Plus/></button>
             </div>
             </div>
             
@@ -882,7 +887,6 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
                         <div className={`absolute top-5 w-3 h-3 rounded-full border-2 ${isDark ? 'border-slate-900' : 'border-white'} shadow-sm z-10 ${style.dot}`}></div>
                       </div>
                       <div className="flex-1 pb-4 pl-2 min-w-0">
-                        {/* 將原本的 SwipeableRow 徹底移除，換成單純可點擊的 div */}
                         <div 
                            onClick={()=>setEditingItem(item)}
                            className={`p-3 rounded-xl border relative shadow-sm transition-all active:scale-[0.98] cursor-pointer ${style.bg} ${style.border}`}>
@@ -895,6 +899,20 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
                                      <span className="flex items-center gap-0.5">{typeIcon(item.type)} {item.type.toUpperCase()}</span>
                                      {item.location && <span className="flex items-center gap-0.5 truncate"><Icons.MapPin size={10}/> {item.location}</span>}
                                   </div>
+                                  
+                                  {/* 航班追蹤按鈕 */}
+                                  {item.flightNo && (
+                                    <a
+                                      href={`https://www.google.com/search?q=航班+${item.flightNo.replace(/\s+/g, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`mt-2 mb-1 inline-flex items-center gap-1 px-2 py-1.5 rounded text-[10px] font-bold shadow-sm transition-transform active:scale-95 ${isDark ? 'bg-sky-900/50 text-sky-300 border border-sky-800' : 'bg-sky-100 text-sky-700 border border-sky-200'}`}
+                                      onClick={e => e.stopPropagation()}
+                                    >
+                                      <Icons.Plane size={12} className="rotate-45" /> {item.flightNo} 即時動態追蹤
+                                    </a>
+                                  )}
+
                                   {(item.notes || safeAtt(item).length>0) && <div className={`mt-2 p-2 rounded text-sm whitespace-pre-wrap border ${isDark ? 'bg-slate-900/50 text-slate-300 border-white/5' : 'bg-white/60 text-slate-600 border-black/5'}`}>{renderTextWithLinks(item.notes, isDark)}{safeAtt(item).length>0 && <div className="flex gap-1 mt-1">{safeAtt(item).map((a,i)=><img key={i} src={a} className="w-8 h-8 rounded object-cover cursor-pointer hover:opacity-80" onClick={(e)=>{e.stopPropagation(); setGallery({images:safeAtt(item), index:i})}}/>)}</div>}</div>}
                                </div>
                                <div className="flex flex-col gap-3 ml-2">
