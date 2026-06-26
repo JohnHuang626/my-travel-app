@@ -678,6 +678,25 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
   const [newItem, setNewItem] = useState({ time: '', activity: '', location: '', type: 'fun', notes: '', attachments: [], flightNo: '' });
   const [newMem, setNewMem] = useState({ text: '', mood: 'happy', attachments: [], linkedId: '' });
 
+  // 新增：每日摘要狀態與自動儲存邏輯
+  const [summary, setSummary] = useState(trip?.dailySummaries?.[day] || '');
+
+  useEffect(() => {
+    setSummary(trip?.dailySummaries?.[day] || '');
+  }, [day, trip?.dailySummaries]);
+
+  const handleSummaryBlur = () => {
+    if (summary !== (trip?.dailySummaries?.[day] || '')) {
+      onUpdate({ dailySummaries: { ...(trip.dailySummaries || {}), [day]: summary } });
+    }
+  };
+
+  const handleSummaryChange = (e) => {
+    setSummary(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = e.target.scrollHeight + 'px';
+  };
+
   const fileRef = useRef(null);
   const [items, setItems] = useState([]);
   const [memories, setMemories] = useState([]);
@@ -871,6 +890,30 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
             </div>
             </div>
             
+            {/* 新增：每日摘要輸入欄位 */}
+            <div className="mb-6 relative group">
+              <div className={`absolute left-3 top-3.5 opacity-50 transition-colors ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>
+                <Icons.FileText size={16}/>
+              </div>
+              <textarea
+                className={`w-full pl-9 pr-3 py-3 rounded-xl border text-sm resize-none outline-none focus:ring-2 focus:ring-sky-500 transition-all duration-200 overflow-hidden ${
+                  isDark ? 'bg-slate-800 border-slate-700 text-slate-200 placeholder-slate-500 focus:bg-slate-700' 
+                         : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400 shadow-sm hover:shadow-md focus:bg-white'
+                }`}
+                placeholder="📝 點此記錄今日的行程摘要或重點提醒..."
+                value={summary}
+                onChange={handleSummaryChange}
+                onBlur={handleSummaryBlur}
+                rows={1}
+                ref={node => {
+                   if(node) {
+                     node.style.height = 'auto';
+                     node.style.height = node.scrollHeight + 'px';
+                   }
+                }}
+              />
+            </div>
+
             <div className="relative">
                {dailyItems.length === 0 && <div className={`text-center py-10 text-sm ${isDark ? 'text-slate-500' : 'text-slate-300'}`}>點擊 + 新增第一個行程<br/><span className="text-xs mt-2 block opacity-70">💡 提示：在畫面上左右滑動可以切換天數喔！</span></div>}
                {dailyItems.map((item, idx) => {
@@ -966,36 +1009,47 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
           const currentDay = i + 1;
           const dayItems = items.filter(item => item.day === currentDay).sort((a, b) => a.time.localeCompare(b.time));
           
-          if (dayItems.length === 0) return null;
+          if (dayItems.length === 0 && !trip.dailySummaries?.[currentDay]) return null;
 
           return (
             <div key={i} className="mb-10" style={{ pageBreakInside: 'avoid' }}>
               <h2 className="text-2xl font-bold border-b-2 border-slate-300 mb-4 pb-2 flex items-center gap-2 text-slate-800">
                  Day {currentDay} <span className="text-base font-normal text-slate-500">({getDisplayDate(trip.startDate, currentDay)})</span>
               </h2>
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-800">
-                    <th className="py-3 px-4 border border-slate-300 w-24 text-center">時間</th>
-                    <th className="py-3 px-4 border border-slate-300 w-1/3">活動名稱</th>
-                    <th className="py-3 px-4 border border-slate-300 w-1/4">地點</th>
-                    <th className="py-3 px-4 border border-slate-300">備註</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dayItems.map(item => (
-                    <tr key={item.id} className="border-b border-slate-200">
-                      <td className="py-3 px-4 border border-slate-300 font-mono text-center text-slate-700">{item.time}</td>
-                      <td className="py-3 px-4 border border-slate-300 font-bold text-slate-800">
-                          <span className="mr-2">{TYPE_ICONS[item.type] || '📍'}</span>
-                          {item.activity}
-                      </td>
-                      <td className="py-3 px-4 border border-slate-300 text-slate-700">{item.location}</td>
-                      <td className="py-3 px-4 border border-slate-300 text-sm text-slate-600 whitespace-pre-wrap">{item.notes}</td>
+
+              {/* 新增：列印版每日摘要區塊 */}
+              {trip.dailySummaries?.[currentDay] && (
+                <div className="mb-4 text-slate-700 bg-slate-50 p-4 rounded-lg border border-slate-200 whitespace-pre-wrap text-sm leading-relaxed">
+                  <span className="font-bold block mb-1 text-slate-800">📝 本日摘要：</span>
+                  {trip.dailySummaries[currentDay]}
+                </div>
+              )}
+
+              {dayItems.length > 0 && (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-800">
+                      <th className="py-3 px-4 border border-slate-300 w-24 text-center">時間</th>
+                      <th className="py-3 px-4 border border-slate-300 w-1/3">活動名稱</th>
+                      <th className="py-3 px-4 border border-slate-300 w-1/4">地點</th>
+                      <th className="py-3 px-4 border border-slate-300">備註</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {dayItems.map(item => (
+                      <tr key={item.id} className="border-b border-slate-200">
+                        <td className="py-3 px-4 border border-slate-300 font-mono text-center text-slate-700">{item.time}</td>
+                        <td className="py-3 px-4 border border-slate-300 font-bold text-slate-800">
+                            <span className="mr-2">{TYPE_ICONS[item.type] || '📍'}</span>
+                            {item.activity}
+                        </td>
+                        <td className="py-3 px-4 border border-slate-300 text-slate-700">{item.location}</td>
+                        <td className="py-3 px-4 border border-slate-300 text-sm text-slate-600 whitespace-pre-wrap">{item.notes}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )
         })}
