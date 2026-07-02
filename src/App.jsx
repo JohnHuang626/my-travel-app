@@ -54,7 +54,7 @@ const Icons = {
   MapPin: (p) => <SvgIcon {...p}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></SvgIcon>,
   ArrowLeft: (p) => <SvgIcon {...p}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></SvgIcon>,
   X: (p) => <SvgIcon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></SvgIcon>,
-  Settings: (p) => <SvgIcon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></SvgIcon>,
+  Settings: (p) => <SvgIcon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></SvgIcon>,
   ArrowUp: (p) => <SvgIcon {...p}><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></SvgIcon>,
   ArrowDown: (p) => <SvgIcon {...p}><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></SvgIcon>,
   ChevronRight: (p) => <SvgIcon {...p}><polyline points="9 18 15 12 9 6"/></SvgIcon>,
@@ -76,7 +76,7 @@ const Icons = {
 };
 
 // ==========================================
-// 2. Local Database (IndexedDB)
+// 3. Local Database (IndexedDB)
 // ==========================================
 
 const LocalDB = {
@@ -557,6 +557,8 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode, toggleTheme }) {
   const [logoutModal, setLogoutModal] = useState(false);
   const [dataToolsModal, setDataToolsModal] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -572,6 +574,13 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode, toggleTheme }) {
     setIsCreating(false); setNewTrip({ ...newTrip, name: '' });
   };
 
+  // 取得今天的日期字串 (YYYY-MM-DD)，用來判斷過去行程
+  const getTodayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const todayStr = getTodayStr();
+
   return (
     <div className="pb-20">
       <ConfirmModal isOpen={!!deleteModal} title="刪除" message="確定刪除？" onConfirm={() => { onDelete(deleteModal); setDeleteModal(null); }} onCancel={() => setDeleteModal(null)} />
@@ -582,6 +591,7 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode, toggleTheme }) {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><Icons.Plane /> 我的旅程</h1>
           <div className="text-[10px] opacity-80 mt-1 flex items-center gap-1">
+            {isStandalone && <span className="bg-white/20 px-1 rounded flex items-center gap-1">📱 App 模式</span>}
             {mode==='cloud' && isOnline ? <span className="flex items-center gap-1"><Icons.Cloud size={10}/> 雲端備份中</span> : <span className="flex items-center gap-1"><Icons.CloudOff size={10}/> 離線模式</span>}
           </div>
         </div>
@@ -616,21 +626,41 @@ function TripList({ trips, onAdd, onDelete, onSelect, mode, toggleTheme }) {
 
         <div className="space-y-3">
           {trips.length===0 && !isCreating && <div className={`text-center py-8 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>暫無行程</div>}
-          {trips.map(t => (
-            <div key={t.id} onClick={() => onSelect(t.id)} className={`relative rounded-xl shadow-sm border flex items-center gap-4 cursor-pointer h-auto min-h-[6rem] overflow-hidden py-2 transition-all ${isDark ? 'bg-slate-800 border-slate-700 hover:shadow-slate-900/50' : 'bg-white border-slate-100 hover:shadow-md'}`}>
-               {t.coverImage ? <><img src={t.coverImage} className="absolute inset-0 w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div></> : <div className={`absolute inset-0 bg-gradient-to-r ${isDark ? 'from-slate-800 to-slate-700' : 'from-sky-50 to-white'}`}></div>}
-               <div className="relative z-10 flex items-center gap-4 w-full p-4">
-                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0 transition-colors ${t.coverImage?'bg-white/20 backdrop-blur text-white':(isDark?'bg-slate-700 text-slate-300':'bg-sky-100 text-slate-700')}`}>
-                   <Icons.Plane className={`transform transition-transform duration-500 ${getPlaneRotation(t.startDate, t.endDate)}`} />
+          {trips.map(t => {
+            // 判斷是否為過去行程
+            const isPast = t.endDate < todayStr;
+            
+            // 根據是否為過去行程調整文字顏色
+            const titleColor = isPast 
+              ? (t.coverImage ? 'text-slate-300' : (isDark ? 'text-slate-500' : 'text-slate-400')) 
+              : (t.coverImage ? 'text-white' : (isDark ? 'text-slate-100' : 'text-slate-800'));
+            
+            const dateColor = isPast 
+              ? (t.coverImage ? 'text-slate-400' : (isDark ? 'text-slate-600' : 'text-slate-400')) 
+              : (t.coverImage ? 'text-white/80' : (isDark ? 'text-slate-400' : 'text-slate-500'));
+            
+            // 根據是否為過去行程調整圖示背景
+            const iconBg = isPast
+              ? (t.coverImage ? 'bg-white/10 text-slate-300' : (isDark ? 'bg-slate-800 text-slate-600' : 'bg-slate-100 text-slate-400'))
+              : (t.coverImage ? 'bg-white/20 backdrop-blur text-white' : (isDark ? 'bg-slate-700 text-slate-300' : 'bg-sky-100 text-slate-700'));
+
+            return (
+              // 最外層加入 isPast 判斷，加上 opacity-80 與 grayscale-[50%] 的效果讓整體淡化
+              <div key={t.id} onClick={() => onSelect(t.id)} className={`relative rounded-xl shadow-sm border flex items-center gap-4 cursor-pointer h-auto min-h-[6rem] overflow-hidden py-2 transition-all ${isDark ? 'bg-slate-800 border-slate-700 hover:shadow-slate-900/50' : 'bg-white border-slate-100 hover:shadow-md'} ${isPast ? 'opacity-80 grayscale-[50%]' : ''}`}>
+                 {t.coverImage ? <><img src={t.coverImage} className={`absolute inset-0 w-full h-full object-cover ${isPast ? 'grayscale' : ''}`} /><div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div></> : <div className={`absolute inset-0 bg-gradient-to-r ${isDark ? 'from-slate-800 to-slate-700' : 'from-sky-50 to-white'}`}></div>}
+                 <div className="relative z-10 flex items-center gap-4 w-full p-4">
+                   <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0 transition-colors ${iconBg}`}>
+                     <Icons.Plane className={`transform transition-transform duration-500 ${getPlaneRotation(t.startDate, t.endDate)}`} />
+                   </div>
+                   <div className="flex-1 min-w-0">
+                      <h3 className={`font-bold ${t.name.length > 6 ? 'text-base whitespace-normal break-words line-clamp-2 leading-tight' : 'text-lg truncate'} ${titleColor}`}>{t.name}</h3>
+                      <p className={`text-xs mt-1 ${dateColor}`}>{t.startDate} ~ {t.endDate}</p>
+                   </div>
+                   <button onClick={e=>{e.stopPropagation(); setDeleteModal(t.id)}} className={`p-2 rounded-full shrink-0 transition-colors ${t.coverImage?'text-white/80 hover:text-red-300':(isDark?'text-slate-500 hover:text-red-400':'text-slate-300 hover:text-red-500')}`}><Icons.Trash size={18}/></button>
                  </div>
-                 <div className="flex-1 min-w-0">
-                    <h3 className={`font-bold ${t.name.length > 6 ? 'text-base whitespace-normal break-words line-clamp-2 leading-tight' : 'text-lg truncate'} ${t.coverImage?'text-white':(isDark?'text-slate-100':'text-slate-800')}`}>{t.name}</h3>
-                    <p className={`text-xs mt-1 ${t.coverImage?'text-white/80':(isDark?'text-slate-400':'text-slate-400')}`}>{t.startDate} ~ {t.endDate}</p>
-                 </div>
-                 <button onClick={e=>{e.stopPropagation(); setDeleteModal(t.id)}} className={`p-2 rounded-full shrink-0 transition-colors ${t.coverImage?'text-white/80 hover:text-red-300':(isDark?'text-slate-500 hover:text-red-400':'text-slate-300 hover:text-red-500')}`}><Icons.Trash size={18}/></button>
-               </div>
-            </div>
-          ))}
+              </div>
+            )
+          })}
         </div>
       </div>
       
@@ -661,24 +691,7 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
   const dayListRef = useRef(null);
   const totalDays = calculateDays(trip.startDate, trip.endDate);
 
-  useEffect(() => {
-    if (dayListRef.current && dayListRef.current.children[day - 1]) {
-      dayListRef.current.children[day - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
-  }, [day]);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
-  }, []);
-  
-  const [newItem, setNewItem] = useState({ time: '', activity: '', location: '', type: 'fun', notes: '', attachments: [], flightNo: '' });
-  const [newMem, setNewMem] = useState({ text: '', mood: 'happy', attachments: [], linkedId: '' });
-
-  // 新增：每日摘要狀態與自動儲存邏輯
+  // 每日摘要狀態
   const [summary, setSummary] = useState(trip?.dailySummaries?.[day] || '');
 
   useEffect(() => {
@@ -696,6 +709,23 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
     e.target.style.height = 'auto';
     e.target.style.height = e.target.scrollHeight + 'px';
   };
+
+  useEffect(() => {
+    if (dayListRef.current && dayListRef.current.children[day - 1]) {
+      dayListRef.current.children[day - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [day]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
+  }, []);
+  
+  const [newItem, setNewItem] = useState({ time: '', activity: '', location: '', type: 'fun', notes: '', attachments: [], flightNo: '' });
+  const [newMem, setNewMem] = useState({ text: '', mood: 'happy', attachments: [], linkedId: '' });
 
   const fileRef = useRef(null);
   const [items, setItems] = useState([]);
@@ -889,8 +919,8 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
               <button onClick={()=>{if(!isOnline){alert("離線模式無法新增行程");return;} setNewItem({time:'',activity:'',location:'',type:'fun',notes:'',attachments:[], flightNo:''}); setEditOpen(true)}} className={`p-2 rounded-full shadow-md transition-colors ${!isOnline ? 'bg-slate-500 cursor-not-allowed text-white' : 'bg-sky-600 hover:bg-sky-500 text-white'}`}><Icons.Plus/></button>
             </div>
             </div>
-            
-            {/* 新增：每日摘要輸入欄位 */}
+
+            {/* 每日摘要區塊 */}
             <div className="mb-6 relative group">
               <div className={`absolute left-3 top-3.5 opacity-50 transition-colors ${isDark ? 'text-slate-400' : 'text-slate-400'}`}>
                 <Icons.FileText size={16}/>
@@ -913,7 +943,7 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
                 }}
               />
             </div>
-
+            
             <div className="relative">
                {dailyItems.length === 0 && <div className={`text-center py-10 text-sm ${isDark ? 'text-slate-500' : 'text-slate-300'}`}>點擊 + 新增第一個行程<br/><span className="text-xs mt-2 block opacity-70">💡 提示：在畫面上左右滑動可以切換天數喔！</span></div>}
                {dailyItems.map((item, idx) => {
@@ -1017,7 +1047,6 @@ function TripDetail({ trip, mode, onUpdate, onBack, toggleTheme }) {
                  Day {currentDay} <span className="text-base font-normal text-slate-500">({getDisplayDate(trip.startDate, currentDay)})</span>
               </h2>
 
-              {/* 新增：列印版每日摘要區塊 */}
               {trip.dailySummaries?.[currentDay] && (
                 <div className="mb-4 text-slate-700 bg-slate-50 p-4 rounded-lg border border-slate-200 whitespace-pre-wrap text-sm leading-relaxed">
                   <span className="font-bold block mb-1 text-slate-800">📝 本日摘要：</span>
@@ -1081,7 +1110,6 @@ function AppContent() {
     };
     setFavicon();
     
-    // 初始化讀取深色模式設定
     const savedTheme = localStorage.getItem('tm_theme');
     if (savedTheme === 'dark') setIsDarkMode(true);
 
